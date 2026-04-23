@@ -499,7 +499,7 @@ let ayFlags = {};
 // ═══════════════════════════════════════════════
 //  PERSISTENCE (localStorage — works on GitHub Pages)
 // ═══════════════════════════════════════════════
-const STORAGE_KEY = 'epy_enrollment_shell_v4';
+const STORAGE_KEY = 'epy_enrollment_shell_v5';
 
 function persist(){
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify({semRows:semRows, allTerms:allTerms, scheduleData:scheduleData})); }catch(e){}
@@ -512,19 +512,9 @@ function loadPersisted(){
     if(!raw || typeof raw !== 'string' || raw.trim() === '') return false;
     var p;
     try{ p = JSON.parse(raw); }catch(e){ return false; }
-    if(!p || !p.semRows || !Array.isArray(p.semRows)) return false;
-    semRows = p.semRows;
-    // Normalize and deduplicate on load
-    sanitizeSemRows();
-    // Merge any DEFAULT_DATA rows not already in saved data (e.g. newly added courses)
-    DEFAULT_DATA.forEach(function(def){
-      var exists = semRows.some(function(r){ return r.course===def.course && r.campus===def.campus; });
-      if(!exists) semRows.push(JSON.parse(JSON.stringify(def)));
-    });
-    if(p.allTerms && Array.isArray(p.allTerms)){ allTerms = p.allTerms; allTerms.sort(termSort); }
+    if(!p) return false;
+    // Load scheduleData independently — does not require semRows to be present
     if(p.scheduleData && typeof p.scheduleData === 'object'){
-      // Merge saved data ON TOP of baked-in defaults so default entries are never lost.
-      // Saved entries for the same key overwrite defaults; new semesters are added.
       Object.keys(p.scheduleData).forEach(function(semKey){
         if(!scheduleData[semKey]) scheduleData[semKey] = {};
         Object.keys(p.scheduleData[semKey]).forEach(function(k){
@@ -532,6 +522,15 @@ function loadPersisted(){
         });
       });
     }
+    // Load enrollment data if present
+    if(!p.semRows || !Array.isArray(p.semRows)) return true;
+    semRows = p.semRows;
+    sanitizeSemRows();
+    DEFAULT_DATA.forEach(function(def){
+      var exists = semRows.some(function(r){ return r.course===def.course && r.campus===def.campus; });
+      if(!exists) semRows.push(JSON.parse(JSON.stringify(def)));
+    });
+    if(p.allTerms && Array.isArray(p.allTerms)){ allTerms = p.allTerms; allTerms.sort(termSort); }
     return true;
   }catch(e){ return false; }
 }
@@ -1242,7 +1241,7 @@ function schedRow(semKey, course, campus, si, e, extra){
   var isOnline = (campus === 'Online Ed.');
   if(isOnline && e.slot !== 'Online/Async'){
     e.slot = 'Online/Async';
-    persist();
+    // do not call persist() here — saving during render can overwrite loaded data
   }
   var slotCell;
   if(isOnline){
