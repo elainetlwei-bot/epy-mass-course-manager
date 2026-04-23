@@ -1,0 +1,2085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>EPY Mass Enrollment Manager — Shell</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-secondary: #f7f7f5;
+    --bg-tertiary: #f0ede8;
+    --text: #1a1a18;
+    --text-secondary: #5a5a56;
+    --text-tertiary: #8a8a84;
+    --border: rgba(0,0,0,0.12);
+    --border-med: rgba(0,0,0,0.22);
+    --border-strong: rgba(0,0,0,0.38);
+    --accent: #1a4f8a;
+    --accent-light: #e6f1fb;
+    --purple: #534ab7;
+    --purple-light: #eeedfe;
+    --green: #3b6d11;
+    --green-light: #eaf3de;
+    --red: #a32d2d;
+    --success: #3b6d11;
+    --danger: #a32d2d;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.06);
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a;
+      --bg-secondary: #252523;
+      --bg-tertiary: #2e2e2b;
+      --text: #f0ede8;
+      --text-secondary: #a8a8a0;
+      --text-tertiary: #6a6a62;
+      --border: rgba(255,255,255,0.1);
+      --border-med: rgba(255,255,255,0.18);
+      --border-strong: rgba(255,255,255,0.28);
+      --accent: #5b9ee0;
+      --accent-light: #0c2840;
+      --purple: #9b94e8;
+      --purple-light: #1e1b4a;
+      --green-light: #1a2e08;
+      --success: #6bbf3a;
+      --danger: #e06060;
+      --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.25);
+    }
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    background: var(--bg-secondary);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  /* Header */
+  .site-header {
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--shadow);
+  }
+  .site-title { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; color: var(--text); font-family: 'Georgia', serif; }
+  .site-title span { color: var(--accent); }
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+  /* Buttons */
+  .btn {
+    font-family: inherit;
+    font-size: 12px;
+    padding: 6px 14px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border-med);
+    cursor: pointer;
+    background: var(--bg);
+    color: var(--text);
+    transition: background 0.15s, border-color 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .btn:hover { background: var(--bg-secondary); border-color: var(--border-strong); }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-primary:hover { opacity: 0.9; background: var(--accent); }
+  .btn-success { background: var(--green); color: #fff; border-color: var(--green); }
+  .btn-success:hover { opacity: 0.9; }
+  .btn-sm { font-size: 11px; padding: 4px 10px; }
+  /* Layout */
+  .container { max-width: 1400px; margin: 0 auto; padding: 1.5rem 2rem; }
+  /* Tabs */
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; }
+  .tab {
+    padding: 10px 20px;
+    font-size: 13px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    color: var(--text-secondary);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    font-family: inherit;
+    transition: color 0.15s;
+  }
+  .tab.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+  .tab:hover:not(.active) { color: var(--text); }
+  /* Controls bar */
+  .controls { display: flex; gap: 12px; align-items: flex-end; margin-bottom: 1rem; flex-wrap: wrap; }
+  .ctrl-group { display: flex; flex-direction: column; gap: 4px; }
+  .ctrl-label { font-size: 10px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: .07em; font-weight: 600; font-family: 'Georgia', serif; }
+  select, input[type=number] {
+    font-family: inherit;
+    font-size: 12px;
+    padding: 6px 10px;
+    border: 1px solid var(--border-med);
+    border-radius: var(--radius);
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  select:focus, input[type=number]:focus { border-color: var(--accent); }
+  /* Table wrapper — frozen rows + cols */
+  .table-wrap {
+    overflow: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    max-height: 480px;
+    box-shadow: var(--shadow);
+    background: var(--bg);
+  }
+  table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; }
+  th {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-weight: 600;
+    padding: 7px 10px;
+    text-align: left;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    font-family: 'Georgia', serif;
+    font-size: 11px;
+  }
+  td {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    white-space: nowrap;
+    background: var(--bg);
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg-secondary); }
+  tr:hover td.frozen { background: var(--bg-secondary); }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; font-family: 'Georgia', serif; }
+  td.editable { cursor: pointer; }
+  td.editable:hover { background: var(--accent-light) !important; }
+  td.editable:hover .cv { text-decoration: underline; text-decoration-style: dotted; }
+  .cell-input {
+    width: 52px; font-size: 12px; padding: 2px 5px; text-align: right;
+    border: 1px solid var(--accent); border-radius: 4px;
+    background: var(--bg); color: var(--text); font-family: inherit;
+  }
+  .sec-input { width: 38px; }
+  /* Frozen columns */
+  .frozen { position: sticky; z-index: 3; background: var(--bg); }
+  th.frozen { z-index: 5; background: var(--bg-secondary); }
+  .frozen.col-1 { left: 0; min-width: 112px; max-width: 112px; width: 112px; }
+  .frozen.col-2 { left: 112px; min-width: 88px; max-width: 88px; width: 88px; border-right: 2px solid var(--border-strong); }
+  th.frozen.col-2 { border-right: 2px solid var(--border-strong); }
+  .frozen.col-2::after {
+    content: ''; position: absolute; top: 0; right: -6px; width: 6px; height: 100%;
+    background: linear-gradient(to right, rgba(0,0,0,0.07), transparent); pointer-events: none;
+  }
+  /* Two-row AY header */
+  .row-ay th { font-size: 11px; font-weight: 700; color: var(--text); text-align: center; padding: 6px 8px; border-bottom: 0; top: 0; z-index: 2; }
+  .row-ay th.frozen { z-index: 5; }
+  .row-term th { font-size: 10px; font-weight: 400; color: var(--text-tertiary); text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--border); top: 29px; z-index: 2; }
+  .row-term th.frozen { z-index: 5; }
+  /* Group headers */
+  .group-header td { background: var(--bg-tertiary) !important; font-weight: 700; font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .06em; font-family: 'Georgia', serif; }
+  .group-header td.frozen { background: var(--bg-tertiary) !important; }
+  /* Badges */
+  .badge { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 600; font-family: 'Georgia', serif; }
+  .badge-stk { background: var(--accent-light); color: var(--accent); }
+  .badge-oe { background: var(--purple-light); color: var(--purple); }
+  .flag-high { display:inline-block;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:600;background:#faeeda;color:#854f0b;margin-left:5px;cursor:help; }
+  .flag-low  { display:inline-block;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:600;background:#fcebeb;color:#a32d2d;margin-left:5px;cursor:help; }
+  tr.row-flagged-high td { background: #fffbf0 !important; }
+  tr.row-flagged-low  td { background: #fff8f8 !important; }
+  tr.row-flagged-high td.frozen { background: #fffbf0 !important; }
+  tr.row-flagged-low  td.frozen { background: #fff8f8 !important; }
+  @media (prefers-color-scheme: dark) {
+    tr.row-flagged-high td, tr.row-flagged-high td.frozen { background: #2a2210 !important; }
+    tr.row-flagged-low  td, tr.row-flagged-low  td.frozen { background: #2a1010 !important; }
+  }
+  /* Metric cards */
+  .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 1.5rem; }
+  .metric {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.25rem;
+    box-shadow: var(--shadow);
+  }
+  .metric-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; font-family: 'Georgia', serif; }
+  .metric-value { font-size: 24px; font-weight: 700; color: var(--text); line-height: 1.1; }
+  .metric-sub { font-size: 11px; color: var(--text-tertiary); margin-top: 3px; }
+  /* Add bar */
+  /* Add bar */
+  .add-bar { display: flex; gap: 8px; align-items: center; margin-top: .75rem; flex-wrap: wrap; }
+  .save-notice { font-size: 12px; color: var(--success); display: none; }
+  .hint { font-size: 11px; color: var(--text-tertiary); font-style: italic; }
+  .tot-cell { font-weight: 700; }
+  [title] { cursor: help; }
+  /* Import/Export panel */
+  .io-bar {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 10px 14px;
+    margin-bottom: 1.25rem; box-shadow: var(--shadow);
+  }
+  .io-bar-label { font-size: 11px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: .06em; margin-right: 4px; font-weight: 600; }
+  .status-msg { font-size: 12px; padding: 4px 10px; border-radius: var(--radius); display: none; }
+  .status-ok { background: var(--green-light); color: var(--green); }
+  .status-err { background: #fcebeb; color: var(--red); }
+  /* Sep borders on AY columns */
+  .sep-strong { border-left: 2px solid var(--border-strong) !important; }
+  .sep-soft { border-left: 1px solid var(--border) !important; }
+  /* Scheduling tab */
+  .instr-input { font-family:inherit;font-size:12px;padding:3px 6px;border:0.5px solid var(--border-secondary);border-radius:4px;background:var(--bg);color:var(--text);width:110px; }
+  .instr-input:focus { border-color:var(--accent);outline:none; }
+  .del-btn { font-size:11px;padding:2px 8px;cursor:pointer;border:0.5px solid var(--border-med);border-radius:4px;background:none;color:var(--text-tertiary);font-family:inherit; }
+  .del-btn:hover { background:var(--bg-tertiary);color:var(--danger);border-color:var(--danger); }
+  .tag-skipped { display:inline-block;font-size:10px;padding:1px 6px;border-radius:20px;background:var(--bg-tertiary);color:var(--text-tertiary);font-weight:600; }
+  /* Week calendar tab */
+  .cal-outer { overflow:auto; border:1px solid var(--border); border-radius:var(--radius-lg); max-height:640px; box-shadow:var(--shadow); background:var(--bg); }
+  .cal-table { display:flex; min-width:600px; }
+  .cal-time-col { flex:0 0 90px; border-right:2px solid var(--border-strong); position:sticky; left:0; background:var(--bg-secondary); z-index:3; }
+  .cal-day-cols { display:flex; flex:1; }
+  .cal-day { flex:1; min-width:110px; border-right:1px solid var(--border); display:flex; flex-direction:column; }
+  .cal-day:last-child { border-right:none; }
+  .cal-day-header { background:var(--bg-secondary); font-size:12px; font-weight:700; color:var(--text-secondary); text-align:center; padding:7px 4px; border-bottom:2px solid var(--border-strong); position:sticky; top:0; z-index:2; font-family:'Georgia',serif; }
+  .cal-time-header { background:var(--bg-secondary); font-size:12px; font-weight:700; padding:7px 8px; border-bottom:2px solid var(--border-strong); position:sticky; top:0; z-index:4; }
+  .cal-time-body { position:relative; }
+  .cal-slot-lbl { height:30px; padding:0 8px; display:flex; align-items:center; justify-content:flex-end; font-size:10px; color:var(--text-tertiary); border-bottom:1px solid var(--border); font-family:'Georgia',serif; box-sizing:border-box; white-space:nowrap; }
+  .cal-day-body { position:relative; }
+  .cal-slot-bg { height:30px; border-bottom:1px solid var(--border); box-sizing:border-box; }
+  .cal-block { position:absolute; left:2px; right:2px; border-radius:4px; padding:3px 6px; font-size:10px; line-height:1.35; overflow:hidden; box-sizing:border-box; }
+  .cal-block-normal { background:var(--bg-secondary); border:1px solid var(--border-med); color:var(--text); }
+  .cal-block-conflict { background:#fcebeb; border:1px solid var(--danger); color:var(--danger); }
+  .cal-block-name { font-weight:700; }
+  .cal-block-instr { opacity:.75; }
+</style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="site-title"><span>EPY</span> Mass Enrollment Manager <span style="font-size:11px;color:var(--text-tertiary);font-weight:400;margin-left:6px">— Shell</span></div>
+  <div class="header-actions">
+    <button class="btn btn-sm btn-primary" onclick="document.getElementById('import-excel-input').click()" title="Load all data from Excel">⬆ Load</button>
+    <input id="import-excel-input" type="file" accept=".xlsx,.csv" style="display:none" onchange="importAny(event)"/>
+    <input id="import-input" type="file" accept=".xlsx,.csv" style="display:none" onchange="importAny(event)"/>
+    <button class="btn btn-sm btn-primary" onclick="exportExcel()" title="Save all data to Excel">⬇ Save</button>
+    <button class="btn btn-sm" onclick="clearAll()" title="Wipe all data from this browser" style="color:var(--danger);border-color:var(--danger)">↺ Clear</button>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Status message -->
+  <div class="status-msg" id="status-msg"></div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('semester')">Enrollment by semester</button>
+    <button class="tab" onclick="showTab('ay')">Enrollment by AY</button>
+    <button class="tab" onclick="showTab('schedule')">Course scheduling</button>
+    <button class="tab" onclick="showTab('calendar')">Week calendar</button>
+  </div>
+
+  <!-- ══ SEMESTER TAB ══ -->
+  <div id="tab-semester">
+    <div class="controls">
+      <div class="ctrl-group">
+        <div class="ctrl-label">Course</div>
+        <select id="sem-course-filter" onchange="renderSemester()"><option value="">All courses</option></select>
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-label">Campus</div>
+        <select id="sem-campus-filter" onchange="renderSemester()">
+          <option value="">All</option>
+          <option value="Starkville">Starkville</option>
+          <option value="Online Ed.">Online Ed.</option>
+        </select>
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-label">AY shown</div>
+        <select id="sem-range" onchange="renderSemester()">
+          <option value="3">Last 3 AYs</option>
+          <option value="5" selected>Last 5 AYs</option>
+          <option value="all">All AYs</option>
+        </select>
+      </div>
+    </div>
+    <div class="table-wrap" id="sem-table-wrap"></div>
+    <div class="add-bar">
+      <button class="btn btn-sm" onclick="addSemester()">+ Add semester</button>
+      <select id="add-season" style="font-size:12px;padding:5px 8px">
+        <option>Summer</option><option>Fall</option><option>Winter</option><option>Spring</option>
+      </select>
+      <select id="add-year" style="font-size:12px;padding:5px 8px"></select>
+      <span class="save-notice" id="save-notice">✓ Semester added</span>
+    </div>
+    <div class="add-bar" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+      <button class="btn btn-sm btn-success" onclick="addCourseRow()">+ Add course</button>
+      <input id="new-course" type="text" placeholder="e.g. EPY 2513" style="font-size:12px;padding:5px 8px;width:130px"/>
+      <select id="new-campus" style="font-size:12px;padding:5px 8px">
+        <option value="Starkville">Starkville</option>
+        <option value="Online Ed.">Online Ed.</option>
+      </select>
+      <input id="new-sections" type="number" min="0.05" step="0.05" max="20" placeholder="Sec/yr" style="font-size:12px;padding:5px 8px;width:70px"/>
+      <span class="hint">Click any enrollment cell to edit inline</span>
+    </div>
+  </div>
+
+  <!-- ══ AY TAB ══ -->
+  <div id="tab-ay" style="display:none">
+    <div class="metric-grid" id="ay-metrics"></div>
+    <div id="ay-flag-legend" style="margin-bottom:.75rem;font-size:12px;color:var(--text-secondary);display:flex;align-items:center;gap:8px;flex-wrap:wrap"></div>
+    <div class="table-wrap" id="ay-table-wrap"></div>
+    <div class="add-bar" style="margin-top:.75rem">
+      <span class="hint">Click Sec/yr or any cell to edit · CAP recalculates automatically</span>
+    </div>
+  </div>
+
+  <!-- ══ SCHEDULING TAB ══ -->
+  <div id="tab-schedule" style="display:none">
+    <div class="controls" style="margin-bottom:1.25rem">
+      <div class="ctrl-group">
+        <div class="ctrl-label">Semester to plan</div>
+        <select id="sched-semester" onchange="renderSchedule()">
+          <option value="Fall26">Fall 2026</option>
+          <option value="Winter26">Winter 2026</option>
+          <option value="Spring27">Spring 2027</option>
+          <option value="Summer27">Summer 2027</option>
+          <option value="Fall27">Fall 2027</option>
+          <option value="Winter27">Winter 2027</option>
+          <option value="Spring28">Spring 2028</option>
+          <option value="Summer28">Summer 2028</option>
+          <option value="Fall28">Fall 2028</option>
+          <option value="Winter28">Winter 2028</option>
+          <option value="Spring29">Spring 2029</option>
+          <option value="Summer29">Summer 2029</option>
+          <option value="Fall29">Fall 2029</option>
+        </select>
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-label">Campus</div>
+        <select id="sched-campus" onchange="renderSchedule()">
+          <option value="">Both</option>
+          <option value="Starkville">Starkville</option>
+          <option value="Online Ed.">Online Ed.</option>
+        </select>
+      </div>
+      <div style="margin-left:auto;align-self:flex-end;display:flex;gap:6px">
+        <button class="btn btn-sm btn-success" onclick="toggleAddPanel()">+ Add / Restore</button>
+
+      </div>
+    </div>
+    <div id="sched-add-panel" style="display:none;margin-bottom:1rem;padding:.75rem 1rem;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-secondary);font-size:12px"></div>
+    <div class="metric-grid" id="sched-metrics"></div>
+    <div class="table-wrap" id="sched-table-wrap"></div>
+    <div id="sched-load-panel" style="margin-top:1.25rem"></div>
+    <div class="add-bar" style="margin-top:.75rem">
+      <span class="hint">Instructor assignments save automatically · ✕ removes a section · + Add / Restore adds sections or courses back</span>
+    </div>
+  </div>
+
+  <!-- ══ CALENDAR TAB ══ -->
+  <div id="tab-calendar" style="display:none">
+    <div class="controls" style="margin-bottom:1.25rem">
+      <div class="ctrl-group">
+        <div class="ctrl-label">Semester</div>
+        <select id="cal-semester" onchange="renderCalendar()">
+          <option value="Fall26">Fall 2026</option>
+          <option value="Winter26">Winter 2026</option>
+          <option value="Spring27">Spring 2027</option>
+          <option value="Summer27">Summer 2027</option>
+          <option value="Fall27">Fall 2027</option>
+          <option value="Winter27">Winter 2027</option>
+          <option value="Spring28">Spring 2028</option>
+          <option value="Summer28">Summer 2028</option>
+          <option value="Fall28">Fall 2028</option>
+          <option value="Winter28">Winter 2028</option>
+          <option value="Spring29">Spring 2029</option>
+          <option value="Summer29">Summer 2029</option>
+          <option value="Fall29">Fall 2029</option>
+        </select>
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-label">Campus</div>
+        <select id="cal-campus" onchange="renderCalendar()">
+          <option value="Starkville" selected>Starkville</option>
+          <option value="">Both</option>
+        </select>
+      </div>
+    </div>
+    <div id="cal-conflict-banner" style="display:none;margin-bottom:1rem;padding:.6rem 1rem;border-radius:var(--radius);background:#fcebeb;color:var(--danger);font-size:12px;font-weight:600;border:1px solid var(--danger)"></div>
+    <div id="cal-wrap" style="overflow-x:auto"></div>
+    <div style="margin-top:.75rem;display:flex;flex-wrap:wrap;gap:16px;font-size:11px;color:var(--text-tertiary);align-items:center">
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#fcebeb;border:1px solid var(--danger);margin-right:4px;vertical-align:middle"></span>Conflict between EPY 4xxx courses</span>
+      <span style="font-style:italic">Online/Async and unscheduled sections not shown on grid</span>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+// ═══════════════════════════════════════════════
+//  CONSTANTS & HELPERS
+// ═══════════════════════════════════════════════
+const AY_DEFS = [
+  {label:'AY 2014',terms:['Summer14','Fall14','Winter14','Spring15']},
+  {label:'AY 2015',terms:['Summer15','Fall15','Winter15','Spring16']},
+  {label:'AY 2016',terms:['Summer16','Fall16','Winter16','Spring17']},
+  {label:'AY 2017',terms:['Summer17','Fall17','Winter17','Spring18']},
+  {label:'AY 2018',terms:['Summer18','Fall18','Winter18','Spring19']},
+  {label:'AY 2019',terms:['Summer19','Fall19','Winter19','Spring20']},
+  {label:'AY 2020',terms:['Summer20','Fall20','Winter20','Spring21']},
+  {label:'AY 2021',terms:['Summer21','Fall21','Winter21','Spring22']},
+  {label:'AY 2022',terms:['Summer22','Fall22','Winter22','Spring23']},
+  {label:'AY 2023',terms:['Summer23','Fall23','Winter23','Spring24']},
+  {label:'AY 2024',terms:['Summer24','Fall24','Winter24','Spring25']},
+  {label:'AY 2025',terms:['Summer25','Fall25','Winter25','Spring26']},
+  {label:'AY 2026',terms:['Summer26','Fall26','Winter26','Spring27']},
+];
+const TERM_SHORT = {Summer:'Sum',Fall:'Fall',Winter:'Win',Spring:'Spr'};
+const SEASON_ORDER = {Summer:0,Fall:1,Winter:2,Spring:3};
+const F1 = 'frozen col-1', F2 = 'frozen col-2';
+
+function getSeason(t){for(const s of Object.keys(SEASON_ORDER)){if(t.startsWith(s))return s;}return 'Spring';}
+function getYear(t){return parseInt(t.replace(/\D/g,''));}
+function termSort(a,b){const ya=getYear(a),yb=getYear(b);if(ya!==yb)return ya-yb;return SEASON_ORDER[getSeason(a)]-SEASON_ORDER[getSeason(b)];}
+function yr2(n){return String(n).padStart(2,'0');}
+
+// Sort courses by numeric code, then full name (so EPY 4033/6033 sorts by 4033)
+function courseSort(a, b){
+  var na = parseInt((a.match(/\d+/)||[0])[0]);
+  var nb = parseInt((b.match(/\d+/)||[0])[0]);
+  if(na !== nb) return na - nb;
+  return a.localeCompare(b);
+}
+function rowSort(a, b){
+  // Sort by campus first (Starkville before Online Ed.), then course code
+  if(a.campus !== b.campus){
+    if(a.campus === 'Starkville') return -1;
+    if(b.campus === 'Starkville') return 1;
+    return a.campus.localeCompare(b.campus);
+  }
+  return courseSort(a.course, b.course);
+}
+
+function showStatus(msg, ok=true){
+  const el = document.getElementById('status-msg');
+  el.textContent = msg;
+  el.className = 'status-msg ' + (ok ? 'status-ok' : 'status-err');
+  el.style.display = 'block';
+  setTimeout(()=>el.style.display='none', 3500);
+}
+
+// ═══════════════════════════════════════════════
+//  DEFAULT DATA
+// ═══════════════════════════════════════════════
+const DEFAULT_DATA = [{"course":"EPY 2513","campus":"Starkville","sections":3,"data":{}},{"course":"EPY 3063","campus":"Starkville","sections":2,"data":{}},{"course":"EPY 3143","campus":"Starkville","sections":4,"data":{}},{"course":"EPY 3503","campus":"Starkville","sections":2,"data":{}},{"course":"EPY 3513","campus":"Starkville","sections":2,"data":{}},{"course":"EPY 3543","campus":"Starkville","sections":2,"data":{}},{"course":"EPY 4033/6033","campus":"Starkville","sections":2,"data":{}},{"course":"EPY 4073","campus":"Starkville","sections":1,"data":{}},{"course":"EPY 6073","campus":"Starkville","sections":1,"data":{}},{"course":"EPY 4214","campus":"Starkville","sections":2,"data":{}},{"course":"EPY 4313","campus":"Starkville","sections":2,"data":{}},{"course":"EPY 4513","campus":"Starkville","sections":1,"data":{}},{"course":"EPY 6513","campus":"Starkville","sections":1,"data":{}},{"course":"EPY 4553","campus":"Starkville","sections":1,"data":{}},{"course":"EPY 6553","campus":"Starkville","sections":1,"data":{}},{"course":"EPY 4683","campus":"Starkville","sections":1,"data":{}},{"course":"EPY 6214","campus":"Starkville","sections":2,"data":{}},{"course":"EPY 8214","campus":"Starkville","sections":null,"data":{}},{"course":"EPY 8223","campus":"Starkville","sections":null,"data":{}},{"course":"EPY 8513","campus":"Starkville","sections":null,"data":{}},{"course":"EPY 8523","campus":"Starkville","sections":null,"data":{}},{"course":"EPY 8533","campus":"Starkville","sections":null,"data":{}},{"course":"EPY 9213","campus":"Starkville","sections":null,"data":{}},{"course":"EPY 9263","campus":"Starkville","sections":null,"data":{}},{"course":"EPY 9723","campus":"Starkville","sections":null,"data":{}},{"course":"EPY 2513","campus":"Online Ed.","sections":2,"data":{}},{"course":"EPY 3063","campus":"Online Ed.","sections":1,"data":{}},{"course":"EPY 3503","campus":"Online Ed.","sections":2,"data":{}},{"course":"EPY 3513","campus":"Online Ed.","sections":2,"data":{}},{"course":"EPY 3543","campus":"Online Ed.","sections":2,"data":{}},{"course":"EPY 4033/6033","campus":"Online Ed.","sections":2,"data":{}},{"course":"EPY 4073/6073","campus":"Online Ed.","sections":1,"data":{}},{"course":"EPY 4214","campus":"Online Ed.","sections":1,"data":{}},{"course":"EPY 4313","campus":"Online Ed.","sections":1,"data":{}},{"course":"EPY 4513/6513","campus":"Online Ed.","sections":2,"data":{}},{"course":"EPY 4553/6553","campus":"Online Ed.","sections":2,"data":{}},{"course":"EPY 4683","campus":"Online Ed.","sections":2,"data":{}},{"course":"EPY 6214","campus":"Online Ed.","sections":2,"data":{}},{"course":"EPY 8214","campus":"Online Ed.","sections":1,"data":{}},{"course":"EPY 8223","campus":"Online Ed.","sections":null,"data":{}},{"course":"EPY 8293","campus":"Online Ed.","sections":null,"data":{}}];
+
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+let semRows = JSON.parse(JSON.stringify(DEFAULT_DATA));
+let allTerms = [...new Set(AY_DEFS.flatMap(d=>d.terms))];
+allTerms.sort(termSort);
+
+// ═══════════════════════════════════════════════
+//  PERSISTENCE (localStorage — works on GitHub Pages)
+// ═══════════════════════════════════════════════
+const STORAGE_KEY = 'epy_enrollment_shell_v3';
+
+function persist(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify({semRows:semRows, allTerms:allTerms, scheduleData:scheduleData})); }catch(e){}
+}
+
+function loadPersisted(){
+  try{
+    var raw;
+    try{ raw = localStorage.getItem(STORAGE_KEY); }catch(e){ return false; }
+    if(!raw || typeof raw !== 'string' || raw.trim() === '') return false;
+    var p;
+    try{ p = JSON.parse(raw); }catch(e){ return false; }
+    if(!p || !p.semRows || !Array.isArray(p.semRows)) return false;
+    semRows = p.semRows;
+    // Normalize and deduplicate on load
+    sanitizeSemRows();
+    // Merge any DEFAULT_DATA rows not already in saved data (e.g. newly added courses)
+    DEFAULT_DATA.forEach(function(def){
+      var exists = semRows.some(function(r){ return r.course===def.course && r.campus===def.campus; });
+      if(!exists) semRows.push(JSON.parse(JSON.stringify(def)));
+    });
+    if(p.allTerms && Array.isArray(p.allTerms)){ allTerms = p.allTerms; allTerms.sort(termSort); }
+    if(p.scheduleData && typeof p.scheduleData === 'object'){
+      // Merge saved data ON TOP of baked-in defaults so default entries are never lost.
+      // Saved entries for the same key overwrite defaults; new semesters are added.
+      Object.keys(p.scheduleData).forEach(function(semKey){
+        if(!scheduleData[semKey]) scheduleData[semKey] = {};
+        Object.keys(p.scheduleData[semKey]).forEach(function(k){
+          scheduleData[semKey][k] = p.scheduleData[semKey][k];
+        });
+      });
+    }
+    return true;
+  }catch(e){ return false; }
+}
+
+function clearAll(){
+  var ok; try{ ok=confirm('Clear all data from this browser?\n\nMake sure you\'ve exported a CSV first if you want to keep your data.'); }catch(e){ ok=true; }
+  if(!ok) return;
+  try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+  semRows = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  scheduleData = JSON.parse(JSON.stringify(DEFAULT_SCHEDULE));
+  allTerms = [...new Set(AY_DEFS.flatMap(d=>d.terms))];
+  allTerms.sort(termSort);
+  rebuildCourseFilter();
+  renderSemester();
+  renderSchedule();
+  showStatus('↺ All data cleared');
+}
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+(function init(){
+  try{
+    var sel = document.getElementById('add-year');
+    for(var y=14;y<=32;y++){
+      var s=yr2(y); var o=document.createElement('option');
+      o.value=s; o.textContent='20'+s; if(y===26)o.selected=true; sel.appendChild(o);
+    }
+    try{ if(loadPersisted()) rebuildCourseFilter(); }catch(e){}
+    renderSemester();
+  }catch(e){ console.error('Init error:', e); }
+})();
+
+// ═══════════════════════════════════════════════
+//  IMPORT / EXPORT
+
+function rebuildCourseFilter(){
+  const cf = document.getElementById('sem-course-filter');
+  const cur = cf.value;
+  cf.innerHTML = '<option value="">All courses</option>';
+  [...new Set(semRows.map(r=>r.course))].forEach(c=>{
+    const o=document.createElement('option'); o.value=c; o.textContent=c; cf.appendChild(o);
+  });
+  cf.value = cur;
+}
+
+function addCourseRow(){
+  const course = document.getElementById('new-course').value.trim();
+  const campus = document.getElementById('new-campus').value;
+  const sec = document.getElementById('new-sections').value;
+  if(!course){ showStatus('✗ Please enter a course number', false); return; }
+  const exists = semRows.some(r=>r.course===course && r.campus===campus);
+  if(exists){ showStatus('✗ '+course+' ('+campus+') already exists', false); return; }
+  semRows.push({course, campus, sections: sec?parseFloat(sec):null, data:{}});
+  document.getElementById('new-course').value = '';
+  document.getElementById('new-sections').value = '';
+  rebuildCourseFilter();
+  persist();
+  renderSemester();
+  showStatus('✓ Added '+course+' ('+campus+')');
+}
+
+// ═══════════════════════════════════════════════
+//  IMPORT / EXPORT
+// ═══════════════════════════════════════════════
+function exportCSV(){
+  const termSet = new Set();
+  semRows.forEach(r=>Object.keys(r.data).forEach(t=>termSet.add(t)));
+  allTerms.forEach(t=>termSet.add(t));
+  const termList = [...termSet].sort(termSort);
+  const header = ['Course','Campus','Sections', ...termList];
+  const csvRows = [header.join(',')];
+  semRows.forEach(r=>{
+    const vals = [
+      '"'+r.course+'"',
+      '"'+r.campus+'"',
+      r.sections!=null ? r.sections : '',
+      ...termList.map(t=>r.data[t]!=null ? r.data[t] : '')
+    ];
+    csvRows.push(vals.join(','));
+  });
+  const blob = new Blob(['\uFEFF'+csvRows.join('\r\n')], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'EPY_enrollment_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  showStatus('✓ Exported — open in Excel or reimport here anytime');
+}
+
+// ═══════════════════════════════════════════════
+//  UNIFIED IMPORT — routes .xlsx to importExcel, .csv to importCSV or importScheduleCSV
+// ═══════════════════════════════════════════════
+function importAny(evt){
+  var file = evt.target.files[0];
+  evt.target.value = '';  // reset immediately so same file can be re-selected
+  if(!file) return;
+  var name = file.name.toLowerCase();
+  if(name.endsWith('.xlsx') || name.endsWith('.xls')){
+    // Excel: read as ArrayBuffer
+    var r = new FileReader();
+    r.onload = function(e){ importExcelFromBuffer(e.target.result); };
+    r.onerror = function(){ showStatus('\u2717 Could not read file', false); };
+    r.readAsArrayBuffer(file);
+  } else if(name.endsWith('.csv')){
+    // CSV: read as text then route
+    var r2 = new FileReader();
+    r2.onload = function(e){
+      var text = (e.target.result||'').replace(/^\uFEFF/,'');
+      var firstLine = text.split(/\r?\n/)[0].toLowerCase();
+      var hasSemester   = firstLine.indexOf('semester')   >= 0;
+      var hasInstructor = firstLine.indexOf('instructor') >= 0;
+      var hasSections   = firstLine.indexOf('sections')   >= 0;
+      if(hasSemester || (hasInstructor && !hasSections)){
+        _processScheduleCSV(text);
+      } else {
+        _processEnrollmentCSV(text);
+      }
+    };
+    r2.onerror = function(){ showStatus('\u2717 Could not read file', false); };
+    r2.readAsText(file);
+  } else {
+    showStatus('\u2717 Unsupported file type. Please use .xlsx or .csv', false);
+  }
+}
+
+// Text-based wrappers used by importAny (avoids double FileReader issue)
+function importCSVFromText(fakeEvt){
+  try{
+    var text = fakeEvt.target.result.replace(/^\uFEFF/,'');
+    _processEnrollmentCSV(text);
+  } catch(err){ showStatus('\u2717 Import failed: '+err.message, false); }
+}
+function importScheduleFromText(fakeEvt){
+  try{
+    var text = fakeEvt.target.result.replace(/^\uFEFF/,'');
+    _processScheduleCSV(text);
+  } catch(err){ showStatus('\u2717 Import failed: '+err.message, false); }
+}
+
+function importCSV(evt){
+  const file = evt.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const text = e.target.result.replace(/^\uFEFF/,'');
+      _processEnrollmentCSV(text);
+    } catch(err){ showStatus('\u2717 Import failed: '+err.message, false); }
+  };
+  reader.readAsText(file);
+  evt.target.value='';
+}
+// Normalize legacy course names from older exports
+function normalizeCourse(course, campus){
+  var COMBINE = {
+    'EPY 4033': 'EPY 4033/6033',
+    'EPY 6033': 'EPY 4033/6033',
+    'EPY 4073': campus==='Starkville' ? 'EPY 4073' : 'EPY 4073/6073',
+    'EPY 6073': campus==='Starkville' ? 'EPY 6073' : 'EPY 4073/6073',
+    'EPY 4513': campus==='Starkville' ? 'EPY 4513' : 'EPY 4513/6513',
+    'EPY 6513': campus==='Starkville' ? 'EPY 6513' : 'EPY 4513/6513',
+    'EPY 4553': campus==='Starkville' ? 'EPY 4553' : 'EPY 4553/6553',
+    'EPY 6553': campus==='Starkville' ? 'EPY 6553' : 'EPY 4553/6553',
+  };
+  return COMBINE[course] || course;
+}
+
+// Sanitize semRows after import: normalize course names and remove duplicates
+function sanitizeSemRows(){
+  // 1. Normalize course names
+  semRows = semRows.map(function(r){
+    return Object.assign({}, r, {course: normalizeCourse(r.course, r.campus)});
+  });
+  // 2. Deduplicate: if same course|campus appears twice, merge their data
+  var seen = {}, merged = [];
+  semRows.forEach(function(r){
+    var key = r.course + '|' + r.campus;
+    if(seen[key] !== undefined){
+      // Merge data into existing row
+      Object.assign(merged[seen[key]].data, r.data);
+      if(r.sections != null && merged[seen[key]].sections == null)
+        merged[seen[key]].sections = r.sections;
+    } else {
+      seen[key] = merged.length;
+      merged.push(JSON.parse(JSON.stringify(r)));
+    }
+  });
+  semRows = merged;
+}
+
+function _processEnrollmentCSV(text){
+  try {
+      const lines = text.split(/\r?\n/).filter(l=>l.trim());
+      if(lines.length < 2) throw new Error('File appears empty');
+      const headers = parseCSVLine(lines[0]);
+      const courseIdx = headers.findIndex(h=>h.trim().toLowerCase()==='course');
+      const campusIdx = headers.findIndex(h=>h.trim().toLowerCase()==='campus');
+      const secIdx    = headers.findIndex(h=>h.trim().toLowerCase()==='sections');
+      if(courseIdx<0||campusIdx<0) throw new Error('Missing "Course" or "Campus" columns');
+      const termCols = headers.map((h,i)=>({h:h.trim(),i}))
+        .filter(({h,i})=>i!==courseIdx&&i!==campusIdx&&i!==secIdx&&h!=='');
+      const newRows = [];
+      const newTerms = new Set(allTerms);
+      lines.slice(1).forEach(line=>{
+        if(!line.trim()) return;
+        const cols = parseCSVLine(line);
+        const course = (cols[courseIdx]||'').trim();
+        const campus = (cols[campusIdx]||'').trim();
+        if(!course||!campus) return;
+        const sections = secIdx>=0&&cols[secIdx]!==''&&cols[secIdx]!=null ? parseFloat(cols[secIdx]) : null;
+        const data = {};
+        termCols.forEach(({h,i})=>{
+          const val = (cols[i]||'').trim();
+          if(val!=='') { data[h]=parseInt(val); newTerms.add(h); }
+        });
+        newRows.push({course:normalizeCourse(course,campus),campus,sections,data});
+      });
+      if(!newRows.length) throw new Error('No valid rows found');
+      semRows = newRows;
+      sanitizeSemRows();
+      allTerms = [...newTerms].sort(termSort);
+      rebuildCourseFilter();
+      document.getElementById('sem-course-filter').value='';
+      renderSemester();
+      if(document.getElementById('tab-ay').style.display!=='none') renderAY();
+      persist();
+      showStatus('✓ Loaded '+newRows.length+' course rows · Browser will remember this data');
+  } catch(err){
+    showStatus('✗ Import failed: '+err.message, false);
+  }
+}
+
+function parseCSVLine(line){
+  const result=[]; let cur=''; let inQ=false;
+  for(let i=0;i<line.length;i++){
+    const c=line[i];
+    if(c==='"'){ inQ=!inQ; continue; }
+    if(c===','&&!inQ){ result.push(cur); cur=''; continue; }
+    cur+=c;
+  }
+  result.push(cur);
+  return result;
+}
+
+// ═══════════════════════════════════════════════
+//  SEMESTER TAB
+// ═══════════════════════════════════════════════
+function getVisibleRows(){
+  const cf = document.getElementById('sem-course-filter').value;
+  const camp = document.getElementById('sem-campus-filter').value;
+  return semRows.filter(r=>(!cf||r.course===cf)&&(!camp||r.campus===camp)).sort(rowSort);
+}
+function getActiveAYs(rows, rangeN){
+  const active = AY_DEFS.filter(def=>rows.some(r=>def.terms.some(t=>r.data[t]!=null)));
+  if(rangeN==='all') return active;
+  return active.slice(-parseInt(rangeN));
+}
+
+function buildSemHeader(activeAYs){
+  let h = '<tr><th class="'+F1+'" style="text-align:left">Course</th><th class="'+F2+'" style="text-align:left">Campus</th>';
+  activeAYs.forEach((def,ai)=>{
+    def.terms.forEach((t,ti)=>{
+      const season=getSeason(t); const fullYr='20'+yr2(getYear(t));
+      const bL = ti===0 ? (ai===0?'border-left:2px solid var(--border-strong)':'border-left:2px solid var(--border-med)') : 'border-left:1px solid var(--border)';
+      const ayPrefix = ti===0 ? def.label+' · ' : '';
+      h += '<th class="num" style="'+bL+'" title="'+def.label+'">'+ayPrefix+TERM_SHORT[season]+' '+fullYr+'</th>';
+    });
+  });
+  return h+'</tr>';
+}
+
+function renderSemester(){
+  const rows = getVisibleRows();
+  const rangeVal = document.getElementById('sem-range').value;
+  const activeAYs = getActiveAYs(rows, rangeVal);
+
+  if(semRows.length === 0){
+    document.getElementById('sem-table-wrap').innerHTML =
+      '<div style="padding:3rem 2rem;text-align:center;">'+
+      '<div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:.5rem">Welcome back</div>'+
+      '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:1.5rem">Load your saved CSV to pick up where you left off, or add courses manually below.</div>'+
+      '<button onclick="document.getElementById(\'import-excel-input\').click()" style="font-family:inherit;font-size:13px;padding:9px 22px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;">⬆ Load data</button>'+
+      '</div>';
+    return;
+  }
+  const body = rows.map(r=>{
+    const gi = semRows.indexOf(r);
+    const cb = r.campus==='Starkville'?'badge-stk':'badge-oe';
+    let cells='';
+    activeAYs.forEach((def,ai)=>{
+      def.terms.forEach((t,ti)=>{
+        const v = r.data[t];
+        const bL = ti===0?(ai===0?'border-left:2px solid var(--border-strong)':'border-left:2px solid var(--border-med)'):'border-left:1px solid var(--border)';
+        cells += '<td class="num editable" style="'+bL+'" onclick="startEdit(this,'+gi+',\''+t+'\')" title="Click to edit"><span class="cv">'+(v!=null?v:'—')+'</span></td>';
+      });
+    });
+    return '<tr><td class="'+F1+'" style="font-weight:600">'+r.course+'</td><td class="'+F2+'"><span class="badge '+cb+'">'+r.campus+'</span></td>'+cells+'</tr>';
+  }).join('');
+  document.getElementById('sem-table-wrap').innerHTML =
+    '<table><thead>'+buildSemHeader(activeAYs)+'</thead><tbody>'+body+'</tbody></table>';
+}
+
+function startEdit(td, gi, term){
+  if(td.querySelector('input')) return;
+  const cur = semRows[gi].data[term];
+  td.innerHTML = '<input class="cell-input" type="number" value="'+(cur!=null?cur:'')+'" min="0"/>';
+  const inp = td.querySelector('input');
+  inp.focus(); inp.select();
+  inp.onblur = ()=>commitEdit(td,gi,term,inp.value);
+  inp.onkeydown = e=>{ if(e.key==='Enter')inp.blur(); if(e.key==='Escape'){inp.value=cur!=null?cur:'';inp.blur();} };
+}
+function commitEdit(td,gi,term,val){
+  semRows[gi].data[term] = val===''?null:parseInt(val);
+  persist();
+  renderSemester();
+}
+function addSemester(){
+  const season = document.getElementById('add-season').value;
+  const yr = document.getElementById('add-year').value;
+  const key = season+yr;
+  if(!allTerms.includes(key)){ allTerms.push(key); allTerms.sort(termSort); }
+  const notice = document.getElementById('save-notice');
+  notice.style.display='inline';
+  setTimeout(()=>notice.style.display='none', 2000);
+  persist();
+  renderSemester();
+}
+// ═══════════════════════════════════════════════
+//  AY TAB
+// ═══════════════════════════════════════════════
+function calcAYRow(row, ayDef){
+  const matches = semRows.filter(r=>r.course===row.course&&r.campus===row.campus);
+  const termVals={};
+  ayDef.terms.forEach(t=>{let v=null; matches.forEach(m=>{if(m.data[t]!=null)v=(v||0)+m.data[t];}); termVals[t]=v;});
+  const hasAny = Object.values(termVals).some(v=>v!=null);
+  const total = hasAny ? Object.values(termVals).reduce((s,v)=>s+(v||0),0) : null;
+  return {termVals,total};
+}
+function calcTrend(totals){
+  const pts = totals.map((y,x)=>({x,y})).filter(p=>p.y!=null);
+  if(pts.length<2) return null;
+  const n=pts.length, sx=pts.reduce((s,p)=>s+p.x,0), sy=pts.reduce((s,p)=>s+p.y,0);
+  const sxy=pts.reduce((s,p)=>s+p.x*p.y,0), sx2=pts.reduce((s,p)=>s+p.x*p.x,0);
+  const denom=n*sx2-sx*sx; if(denom===0)return null;
+  const slope=(n*sxy-sx*sy)/denom, meanY=sy/n;
+  return meanY!==0?(slope/meanY*100):null;
+}
+function calcCAP(sections, totals){
+  if(!sections) return null;
+  const vals = totals.filter(x=>x!=null);
+  if(!vals.length) return null;
+  return (vals.reduce((a,b)=>a+b,0)/5)/sections;
+}
+function startSecEdit(td,course,campus){
+  if(td.querySelector('input')) return;
+  const cur = semRows.find(r=>r.course===course&&r.campus===campus)?.sections;
+  td.innerHTML='<input class="cell-input sec-input" type="number" value="'+(cur!=null?cur:'')+'" min="0.05" step="0.05" max="20"/>';
+  const inp=td.querySelector('input'); inp.focus(); inp.select();
+  inp.onblur=()=>commitSecEdit(td,course,campus,inp.value);
+  inp.onkeydown=e=>{if(e.key==='Enter')inp.blur();if(e.key==='Escape'){inp.value=cur!=null?cur:'';inp.blur();}};
+}
+function commitSecEdit(td,course,campus,val){
+  const num=val===''?null:parseFloat(val);
+  semRows.filter(r=>r.course===course&&r.campus===campus).forEach(r=>r.sections=num);
+  td.innerHTML='<span class="cv">'+(num!=null?num:'—')+'</span>';
+  td.onclick=function(){startSecEdit(this,course,campus);};
+  persist();
+  renderAY();
+}
+
+// ═══════════════════════════════════════════════
+//  SHARED FLAG LOGIC (used by AY tab + Scheduling tab)
+// ═══════════════════════════════════════════════
+function getCourseFlag(course, campus, cap, trend){
+  const isExcluded = course==='EPY 2513' && campus==='Starkville';
+  const courseNum = parseInt((course.match(/\d+/)||[0])[0]);
+  const isGrad = courseNum >= 6000;
+  if(isExcluded || cap==null || trend==null) return {flagHigh:false, flagLow:false, isGrad};
+  const flagHigh = isGrad ? (cap>20 && trend>0) : (cap>40 && trend>0);
+  const flagLow  = isGrad ? (cap<5  && trend<0) : (cap<20 && trend<0);
+  return {flagHigh, flagLow, isGrad};
+}
+
+function renderAY(){
+  const seen=new Set(); const ayRows=[];
+  semRows.forEach(r=>{const k=r.course+'|'+r.campus; if(!seen.has(k)){seen.add(k);ayRows.push(r);}});
+  ayRows.sort(rowSort);
+
+  if(ayRows.length===0){
+    document.getElementById('ay-metrics').innerHTML='';
+    document.getElementById('ay-table-wrap').innerHTML=
+      '<div style="padding:3rem;text-align:center;color:var(--text-tertiary);font-style:italic;font-size:13px">'+
+      'No data yet — load your CSV from the <strong style="font-style:normal">Enrollment by semester</strong> tab.</div>';
+    return;
+  }
+
+  const allActive=AY_DEFS.filter(def=>ayRows.some(r=>def.terms.some(t=>r.data[t]!=null)));
+  const activeAYs=allActive.slice(-5);
+
+  // No enrollment data yet — show empty state
+  if(!activeAYs.length){
+    document.getElementById('ay-metrics').innerHTML='';
+    document.getElementById('ay-flag-legend').innerHTML='';
+    document.getElementById('ay-table-wrap').innerHTML=
+      '<div style="padding:3rem;text-align:center;color:var(--text-tertiary);font-style:italic;font-size:13px">'+
+      'No enrollment data yet — load your data using the <strong style="font-style:normal">⬆ Load</strong> button.</div>';
+    return;
+  }
+
+  const computed=ayRows.map(r=>({row:r,ayData:activeAYs.map(def=>({def,...calcAYRow(r,def)}))}));
+
+  const lastAY=activeAYs[activeAYs.length-1];
+  const firstAY=activeAYs[0];
+  const getTotal=(c,def)=>{ const a=c.ayData.find(a=>a.def===def); return a?a.total:null; };
+  const totalsLast=computed.map(c=>getTotal(c,lastAY)).filter(x=>x!=null);
+  const grandTotal=totalsLast.reduce((a,b)=>a+b,0);
+  const caps=computed.map(c=>calcCAP(c.row.sections,activeAYs.map(def=>getTotal(c,def)))).filter(x=>x!=null);
+  const avgCap=caps.length?caps.reduce((a,b)=>a+b,0)/caps.length:0;
+  const trendVals=computed.map(c=>calcTrend(activeAYs.map(def=>getTotal(c,def)))).filter(x=>x!=null);
+  const avgTrend=trendVals.length?trendVals.reduce((a,b)=>a+b,0)/trendVals.length:0;
+  const trendTip='Trend = linear regression slope ÷ mean enrollment × 100. Avg % change per AY over '+firstAY.label+'–'+lastAY.label;
+
+  document.getElementById('ay-metrics').innerHTML=
+    '<div class="metric"><div class="metric-label">Total '+lastAY.label+' enrollment</div><div class="metric-value">'+grandTotal.toLocaleString()+'</div><div class="metric-sub">across '+ayRows.length+' sections</div></div>'+
+    '<div class="metric"><div class="metric-label">Avg cap per section</div><div class="metric-value">'+avgCap.toFixed(1)+'</div><div class="metric-sub">students</div></div>'+
+    '<div class="metric" title="'+trendTip+'"><div class="metric-label">Avg trend (5yr) ⓘ</div><div class="metric-value">'+(avgTrend>=0?'+':'')+avgTrend.toFixed(1)+'%</div><div class="metric-sub">per AY, linear regression</div></div>'+
+    '<div class="metric"><div class="metric-label">Courses tracked</div><div class="metric-value">'+ayRows.length+'</div><div class="metric-sub">course sections</div></div>';
+
+  // Flag legend
+  document.getElementById('ay-flag-legend').innerHTML=
+    '<span class="flag-high" title="Undergrad: CAP > 40 + up trend · Grad: CAP > 20 + up trend">▲ High load</span> undergrad CAP>40 · grad CAP>20, both + up trend &nbsp;&nbsp;'+
+    '<span class="flag-low" title="Undergrad: CAP < 20 + down trend · Grad: CAP < 5 + down trend">▼ Low demand</span> undergrad CAP<20 · grad CAP<5, both + down trend &nbsp;&nbsp;'+
+    '<span style="font-size:11px;color:var(--text-tertiary)">(EPY 2513 Starkville excluded)</span>';
+
+  let hdr='<tr>'+
+    '<th class="'+F1+'" style="text-align:left">Course</th>'+
+    '<th class="'+F2+'" style="text-align:left">Campus</th>';
+  activeAYs.forEach((def,ai)=>{
+    const bL=ai===0?'border-left:2px solid var(--border-strong)':'border-left:2px solid var(--border-med)';
+    hdr+='<th class="num" style="'+bL+'">'+def.label+'</th>';
+  });
+  hdr+='<th class="num" style="border-left:2px solid var(--border-strong)">5yr Avg</th>'+
+       '<th class="num" title="'+trendTip+'">Trend ⓘ</th>'+
+       '<th class="num" title="Click any value to edit">Sec/yr ✎</th>'+
+       '<th class="num">CAP</th></tr>';
+
+  const groups=[{key:'Starkville',label:'Starkville'},{key:'Online Ed.',label:'Online Education'}];
+  const totalCols=2+activeAYs.length+4;
+  let html='';
+  groups.forEach(g=>{
+    const gRows=computed.filter(c=>c.row.campus===g.key);
+    if(!gRows.length) return;
+    html+='<tr class="group-header"><td class="'+F1+'">'+g.label+'</td><td class="'+F2+'"></td><td colspan="'+(totalCols-2)+'"></td></tr>';
+    gRows.forEach(({row,ayData})=>{
+      const totals=activeAYs.map(def=>{ const a=ayData.find(x=>x.def===def); return a?a.total:null; });
+      const nonNull=totals.filter(x=>x!=null);
+      const avgVal=nonNull.length?(nonNull.reduce((a,b)=>a+b,0)/5).toFixed(1):'—';
+      const cap=calcCAP(row.sections,totals);
+      const trend=calcTrend(totals);
+      const tV=trend!=null?(trend>=0?'+':'')+trend.toFixed(1)+'%':'—';
+      const tC=trend!=null?(trend>=0?'var(--success)':'var(--danger)'):'inherit';
+      const cb=row.campus==='Starkville'?'badge-stk':'badge-oe';
+      const cEsc=row.course.replace(/'/g,"\\'");
+      const campEsc=row.campus.replace(/'/g,"\\'");
+
+      // Flag — use shared function and cache result for scheduling tab
+      const {flagHigh, flagLow, isGrad: fGrad} = getCourseFlag(row.course, row.campus, cap, trend);
+      ayFlags[row.course+'|'+row.campus] = {flagHigh, flagLow, isGrad: fGrad};
+      const rowClass = flagHigh ? 'row-flagged-high' : flagLow ? 'row-flagged-low' : '';
+      const flagBadge = flagHigh
+        ? '<span class="flag-high" title="'+(fGrad?'CAP over 20 and trending up':'CAP over 40 and trending up — may need more sections')+'">▲ High load</span>'
+        : flagLow
+        ? '<span class="flag-low"  title="'+(fGrad?'CAP under 5 and trending down':'CAP under 20 and trending down — consider review')+'">▼ Low demand</span>'
+        : '';
+
+      let cells='';
+      activeAYs.forEach((def,ai)=>{
+        const ayd=ayData.find(a=>a.def===def);
+        const bL=ai===0?'border-left:2px solid var(--border-strong)':'border-left:2px solid var(--border-med)';
+        cells+='<td class="num tot-cell" style="'+bL+'">'+(ayd.total!=null?ayd.total:'—')+'</td>';
+      });
+      html+='<tr class="'+rowClass+'">'+
+        '<td class="'+F1+'" style="font-weight:600">'+row.course+flagBadge+'</td>'+
+        '<td class="'+F2+'"><span class="badge '+cb+'">'+row.campus+'</span></td>'+
+        cells+
+        '<td class="num" style="border-left:2px solid var(--border-strong);color:var(--text-secondary)">'+avgVal+'</td>'+
+        '<td class="num" style="color:'+tC+'" title="'+trendTip+'">'+tV+'</td>'+
+        '<td class="num editable" onclick="startSecEdit(this,\''+cEsc+'\',\''+campEsc+'\')" title="Click to edit"><span class="cv">'+(row.sections!=null?row.sections:'—')+'</span></td>'+
+        '<td class="num">'+(cap!=null?cap.toFixed(1):'—')+'</td></tr>';
+    });
+  });
+  document.getElementById('ay-table-wrap').innerHTML='<table><thead>'+hdr+'</thead><tbody>'+html+'</tbody></table>';
+}
+
+function showTab(name){
+  document.getElementById('tab-semester').style.display=name==='semester'?'block':'none';
+  document.getElementById('tab-ay').style.display=name==='ay'?'block':'none';
+  document.getElementById('tab-schedule').style.display=name==='schedule'?'block':'none';
+  document.getElementById('tab-calendar').style.display=name==='calendar'?'block':'none';
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',
+    (i===0&&name==='semester')||(i===1&&name==='ay')||(i===2&&name==='schedule')||(i===3&&name==='calendar')));
+  if(name==='ay') renderAY();
+  if(name==='schedule'){ renderAY(); renderSchedule(); }
+  if(name==='calendar'){ syncCalSemester(); renderCalendar(); }
+}
+
+// Keep cal-semester in sync with sched-semester when switching tabs
+function syncCalSemester(){
+  var schedVal = document.getElementById('sched-semester').value;
+  var calSel = document.getElementById('cal-semester');
+  for(var i=0;i<calSel.options.length;i++){
+    if(calSel.options[i].value===schedVal){ calSel.value=schedVal; break; }
+  }
+}
+
+
+
+// ═══════════════════════════════════════════════
+//  SCHEDULING TAB
+// ═══════════════════════════════════════════════
+
+const INSTRUCTORS = ['Abernathy','Bell','Gainer','Gallo','Garemani','Karami','Parra Martinez','Wei','Staff'];
+
+const DEFAULT_INSTRUCTOR = {
+  'EPY 2513|Starkville':'Abernathy',      'EPY 2513|Online Ed.':'Gainer',
+  'EPY 3063|Starkville':'Gallo',           'EPY 3063|Online Ed.':'Karami',
+  'EPY 3143|Starkville':'Parra Martinez',  'EPY 3503|Starkville':'Abernathy',
+  'EPY 3503|Online Ed.':'Gainer',          'EPY 3513|Starkville':'Gallo',
+  'EPY 3513|Online Ed.':'Wei',             'EPY 3543|Starkville':'Abernathy',
+  'EPY 4033/6033|Starkville':'Garemani',   'EPY 4033/6033|Online Ed.':'Bell',
+  'EPY 4073|Starkville':'Karami',     'EPY 6073|Starkville':'Karami',     'EPY 4073/6073|Online Ed.':'Gainer',
+  'EPY 4214|Starkville':'Bell',            'EPY 4214|Online Ed.':'Bell',
+  'EPY 4313|Starkville':'Parra Martinez',  'EPY 4513|Starkville':'Garemani',   'EPY 6513|Starkville':'Garemani',
+  'EPY 4513/6513|Online Ed.':'Bell',       'EPY 4553|Starkville':'Karami',     'EPY 6553|Starkville':'Karami',
+  'EPY 4553/6553|Online Ed.':'Gainer',     'EPY 6214|Starkville':'Parra Martinez',
+  'EPY 6214|Online Ed.':'Garemani',        'EPY 8214|Online Ed.':'Wei'
+};
+
+const SLOT_OPTS = [
+  '',
+  'MWF 7:00 am - 7:50 am',
+  'MWF 8:00 am - 8:50 am',
+  'MWF 9:00 am - 9:50 am',
+  'MWF 10:00 am - 10:50 am',
+  'MWF 11:00 am - 11:50 am',
+  'MWF 12:00 pm - 12:50 pm',
+  'MWF 1:00 pm - 1:50 pm',
+  'MWF 2:00 pm - 2:50 pm',
+  'MWF 3:00 pm - 3:50 pm',
+  'MWF 4:00 pm - 4:50 pm',
+  'MW 12:30 pm - 1:45 pm',
+  'MW 2:00 pm - 3:15 pm',
+  'MW 3:30 pm - 4:45 pm',
+  'MW 5:00 pm - 6:15 pm',
+  'TR 8:00 am - 9:15 am',
+  'TR 9:30 am - 10:45 am',
+  'TR 11:00 am - 12:15 pm',
+  'TR 12:30 pm - 1:45 pm',
+  'TR 2:00 pm - 3:15 pm',
+  'TR 3:30 pm - 4:45 pm',
+  'TR 5:00 pm - 6:15 pm',
+  'M 2:00 pm - 4:50 pm',
+  'M 6:00 pm - 8:50 pm',
+  'T 2:00 pm - 4:50 pm',
+  'T 6:00 pm - 8:50 pm',
+  'W 2:00 pm - 4:50 pm',
+  'W 6:00 pm - 8:50 pm',
+  'R 2:00 pm - 4:50 pm',
+  'R 6:00 pm - 8:50 pm',
+  'Online/Async',
+  'TBD'
+];
+
+const SCHED_SEMS = ['Fall26','Spring27','Fall27','Spring28'];
+
+const SCHEDULE_TABLE = [
+  {course:'EPY 2513',      campus:'Starkville', sections:[[1,1,1,1],[1,0,1,0]]},
+  {course:'EPY 2513',      campus:'Online Ed.', sections:[[1,1,1,1]]},
+  {course:'EPY 3063',      campus:'Starkville', sections:[[1,1,1,1]]},
+  {course:'EPY 3063',      campus:'Online Ed.', sections:[[0,1,0,1]]},
+  {course:'EPY 3143',      campus:'Starkville', sections:[[1,1,1,1],[1,1,1,1]]},
+  {course:'EPY 3503',      campus:'Starkville', sections:[[1,1,1,1]]},
+  {course:'EPY 3503',      campus:'Online Ed.', sections:[[1,1,1,1]]},
+  {course:'EPY 3513',      campus:'Starkville', sections:[[1,1,1,1]]},
+  {course:'EPY 3513',      campus:'Online Ed.', sections:[[1,1,1,1]]},
+  {course:'EPY 3543',      campus:'Starkville', sections:[[1,1,1,1]]},
+  {course:'EPY 3543',      campus:'Online Ed.', sections:[[1,1,1,1]]},
+  {course:'EPY 4033/6033', campus:'Starkville', sections:[[1,1,1,1]]},
+  {course:'EPY 4033/6033', campus:'Online Ed.', sections:[[1,1,1,1]]},
+  {course:'EPY 4073',      campus:'Starkville', sections:[[1,1,1,1]]},
+  {course:'EPY 6073',      campus:'Starkville', sections:[[1,1,1,1]]},
+  {course:'EPY 4073/6073', campus:'Online Ed.', sections:[[1,0,1,0]]},
+  {course:'EPY 4214',      campus:'Starkville', sections:[[1,1,1,1]]},
+  {course:'EPY 4214',      campus:'Online Ed.', sections:[[1,1,1,1]]},
+  {course:'EPY 4313',      campus:'Starkville', sections:[[1,1,1,1]]},
+  {course:'EPY 4513',      campus:'Starkville', sections:[[1,1,1,1]]},
+  {course:'EPY 6513',      campus:'Starkville', sections:[[1,1,1,1]]},
+  {course:'EPY 4513/6513', campus:'Online Ed.', sections:[[1,1,1,1]]},
+  {course:'EPY 4553',      campus:'Starkville', sections:[[1,1,1,1]]},
+  {course:'EPY 6553',      campus:'Starkville', sections:[[1,1,1,1]]},
+  {course:'EPY 4553/6553', campus:'Online Ed.', sections:[[1,1,1,1]]},
+  {course:'EPY 4683',      campus:'Starkville', sections:[[1,0,1,0]]},
+  {course:'EPY 4683',      campus:'Online Ed.', sections:[[1,1,1,1]]},
+  {course:'EPY 6214',      campus:'Starkville', sections:[[1,1,1,1],[0,1,0,1]]},
+  {course:'EPY 6214',      campus:'Online Ed.', sections:[[1,1,1,1]]},
+  {course:'EPY 8214',      campus:'Starkville', sections:[[0,1,0,1]]},
+  {course:'EPY 8214',      campus:'Online Ed.', sections:[[0,1,0,1]]},
+  {course:'EPY 8223',      campus:'Starkville', sections:[[0,0,1,0]]},
+  {course:'EPY 8223',      campus:'Online Ed.', sections:[[0,0,0,1]]},
+  {course:'EPY 8263',      campus:'Starkville', sections:[[0,1,0,0]]},
+  {course:'EPY 8293',      campus:'Online Ed.', sections:[[1,0,0,0]]},
+  {course:'EPY 8513',      campus:'Starkville', sections:[[0,1,0,0]]},
+  {course:'EPY 8523',      campus:'Starkville', sections:[[0,0,0,1]]},
+  {course:'EPY 8533',      campus:'Starkville', sections:[[1,0,0,0]]},
+  {course:'EPY 9213',      campus:'Starkville', sections:[[1,0,1,0]]},
+  {course:'EPY 9263',      campus:'Starkville', sections:[[0,0,0,1]]},
+  {course:'EPY 9723',      campus:'Starkville', sections:[[0,0,1,0]]}
+];
+
+// Semester helpers
+function schedSeason(k){ for(var s of ['Summer','Fall','Winter','Spring']){ if(k.startsWith(s)) return s; } return ''; }
+function schedYear(k){ return 2000+parseInt(k.replace(/\D/g,'')); }
+
+// Map semester key to SCHED_SEMS index (0=Fall26, 1=Spr27, 2=Fall27, 3=Spr28)
+// Pattern repeats on 2yr cycle: Fall-even=0, Spr-odd=1, Fall-odd=2, Spr-even=3
+function semToIdx(k){
+  var s=schedSeason(k), y=schedYear(k), odd=y%2!==0;
+  if(s==='Fall'   && !odd) return 0;
+  if(s==='Spring' &&  odd) return 1;
+  if(s==='Fall'   &&  odd) return 2;
+  if(s==='Spring' && !odd) return 3;
+  return -1; // intersession
+}
+
+const DEFAULT_SCHEDULE = {"Fall26":{"EPY 2513|Starkville|0":{"instructor":"","slot":""},"EPY 2513|Starkville|1":{"instructor":"","slot":""},"EPY 3063|Starkville|0":{"instructor":"","slot":""},"EPY 3143|Starkville|0":{"instructor":"","slot":""},"EPY 3143|Starkville|1":{"instructor":"","slot":""},"EPY 3503|Starkville|0":{"instructor":"","slot":""},"EPY 3513|Starkville|0":{"instructor":"","slot":""},"EPY 3543|Starkville|0":{"instructor":"","slot":""},"EPY 4033/6033|Starkville|0":{"instructor":"","slot":""},"EPY 4073|Starkville|0":{"instructor":"","slot":""},"EPY 4214|Starkville|0":{"instructor":"","slot":""},"EPY 4313|Starkville|0":{"instructor":"","slot":""},"EPY 4513|Starkville|0":{"instructor":"","slot":""},"EPY 4553|Starkville|0":{"instructor":"","slot":""},"EPY 6553|Starkville|0":{"instructor":"","slot":""},"EPY 4683|Starkville|0":{"instructor":"","slot":""},"EPY 6214|Starkville|0":{"instructor":"","slot":""},"EPY 8533|Starkville|0":{"instructor":"","slot":""},"EPY 9213|Starkville|0":{"instructor":"","slot":""},"EPY 2513|Online Ed.|0":{"instructor":"","slot":""},"EPY 3503|Online Ed.|0":{"instructor":"","slot":""},"EPY 3513|Online Ed.|0":{"instructor":"","slot":""},"EPY 3543|Online Ed.|0":{"instructor":"","slot":""},"EPY 4033/6033|Online Ed.|0":{"instructor":"","slot":""},"EPY 4073/6073|Online Ed.|0":{"instructor":"","slot":""},"EPY 4214|Online Ed.|0":{"instructor":"","slot":""},"EPY 4513/6513|Online Ed.|0":{"instructor":"","slot":""},"EPY 4553/6553|Online Ed.|0":{"instructor":"","slot":""},"EPY 4683|Online Ed.|0":{"instructor":"","slot":""},"EPY 6214|Online Ed.|0":{"instructor":"","slot":""},"EPY 8293|Online Ed.|0":{"instructor":"","slot":""}}};
+let scheduleData = JSON.parse(JSON.stringify(DEFAULT_SCHEDULE));
+let ayFlags = {};
+
+// Entry: {instructor, days, time} or null (removed)
+function schedEntry(semKey, course, campus, si){
+  if(!scheduleData[semKey]) scheduleData[semKey]={};
+  var k=course+'|'+campus+'|'+si;
+  if(scheduleData[semKey][k]===null) return null;
+  if(!scheduleData[semKey][k] || typeof scheduleData[semKey][k]!=='object'){
+    scheduleData[semKey][k]={instructor:'',slot:''};
+  }
+  return scheduleData[semKey][k];
+}
+
+function schedRemove(semKey,course,campus,si){
+  if(!scheduleData[semKey]) scheduleData[semKey]={};
+  scheduleData[semKey][course+'|'+campus+'|'+si]=null;
+  persist(); renderSchedule();
+}
+function schedRestore(semKey,course,campus,si){
+  if(scheduleData[semKey]) delete scheduleData[semKey][course+'|'+campus+'|'+si];
+  persist(); renderSchedule();
+}
+function schedSetInstructor(semKey,course,campus,si,val){
+  var e=schedEntry(semKey,course,campus,si); if(e){e.instructor=val;persist();renderSchedule();}
+}
+function schedSetSlot(semKey,course,campus,si,val){
+  var e=schedEntry(semKey,course,campus,si); if(e){e.slot=val;persist();renderSchedule();}
+}
+function schedAddExtra(semKey,course,campus){
+  if(!scheduleData[semKey]) scheduleData[semKey]={};
+  var si=100;
+  while(scheduleData[semKey][course+'|'+campus+'|'+si]!==undefined) si++;
+  scheduleData[semKey][course+'|'+campus+'|'+si]={instructor:'',slot:''};
+  persist(); renderSchedule();
+}
+function schedAddCourse(semKey,val){
+  if(!val) return;
+  var parts=val.split('|'), course=parts[0], campus=parts[1];
+  if(!scheduleData[semKey]) scheduleData[semKey]={};
+  var k=course+'|'+campus+'|100';
+  if(!scheduleData[semKey][k]) scheduleData[semKey][k]={instructor:'',slot:''};
+  persist(); renderSchedule();
+}
+function toggleAddPanel(){
+  var el=document.getElementById('sched-add-panel');
+  el.style.display=el.style.display==='none'?'block':'none';
+}
+
+// Build HTML for one table row
+function schedRow(semKey, course, campus, si, e, extra){
+  var cb=campus==='Starkville'?'badge-stk':'badge-oe';
+  var f=ayFlags[course+'|'+campus]||{flagHigh:false,flagLow:false};
+  var flagHtml=f.flagHigh?'<span class="flag-high">&#9650; High load</span>':f.flagLow?'<span class="flag-low">&#9660; Low demand</span>':'';
+  var extraBadge=extra?' <span style="font-size:10px;color:var(--text-tertiary)">(added)</span>':'';
+
+  // Build instructor select
+  var instrOpts='<option value="">&#8212; Select &#8212;</option>';
+  for(var i=0;i<INSTRUCTORS.length;i++){
+    instrOpts+='<option value="'+INSTRUCTORS[i]+'"'+(INSTRUCTORS[i]===e.instructor?' selected':'')+'>'+INSTRUCTORS[i]+'</option>';
+  }
+
+  // Encode params safely for inline handlers — use single-quoted JS strings so they
+  // don't collide with the surrounding double-quoted HTML attribute
+  function sq(s){ return "'"+String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'"; }
+  var ck=sq(semKey)+','+sq(course)+','+sq(campus)+','+si;
+
+  // Build slot cell — Online Ed. is always locked to Online/Async
+  var isOnline = (campus === 'Online Ed.');
+  if(isOnline && e.slot !== 'Online/Async'){
+    e.slot = 'Online/Async';
+    persist();
+  }
+  var slotCell;
+  if(isOnline){
+    slotCell = '<td><span style="font-size:12px;color:var(--text-secondary);font-style:italic;padding:3px 6px;display:inline-block">Online/Async</span></td>';
+  } else {
+    var slotOpts='';
+    for(var d=0;d<SLOT_OPTS.length;d++){
+      var sv=SLOT_OPTS[d];
+      var curSlot=e.slot||(e.days&&e.time?e.days+' '+e.time:e.days||'');
+      slotOpts+='<option value="'+sv+'"'+(sv===curSlot?' selected':'')+'>'+(sv||'\u2014 Select time \u2014')+'</option>';
+    }
+    slotCell = '<td><select class="instr-input" style="width:190px" onchange="schedSetSlot('+ck+',this.value)">'+slotOpts+'</select></td>';
+  }
+
+  // Row highlight from AY flags
+  var rowClass = f.flagHigh ? 'row-flagged-high' : f.flagLow ? 'row-flagged-low' : '';
+  // Inline flag badge on course name
+  var flagBadge = f.flagHigh
+    ? '<span class="flag-high" style="margin-left:5px" title="High load">&#9650; High load</span>'
+    : f.flagLow
+    ? '<span class="flag-low"  style="margin-left:5px" title="Low demand">&#9660; Low demand</span>'
+    : '';
+
+  return '<tr class="'+rowClass+'">'+
+    '<td class="'+F1+'" style="font-weight:600">'+course+flagBadge+extraBadge+'</td>'+
+    '<td class="'+F2+'"><span class="badge '+cb+'">'+campus+'</span></td>'+
+    '<td><select class="instr-input" onchange="schedSetInstructor('+ck+',this.value)">'+instrOpts+'</select></td>'+
+    slotCell+
+    '<td style="text-align:center"><button class="del-btn" onclick="schedRemove('+ck+')" title="Remove">&#10005;</button></td>'+
+    '</tr>';
+}
+
+function buildSchedTable(rows){
+  var hdr='<tr>'+
+    '<th class="'+F1+'" style="text-align:left">Course</th>'+
+    '<th class="'+F2+'" style="text-align:left">Campus</th>'+
+    '<th>Instructor</th><th>Schedule</th>'+
+    '<th style="text-align:center">Remove</th></tr>';
+  var groups=[{key:'Starkville',label:'Starkville'},{key:'Online Ed.',label:'Online Education'}];
+  var body='';
+  groups.forEach(function(g){
+    var gr=rows.filter(function(r){return r.campus===g.key;});
+    if(!gr.length) return;
+    body+='<tr class="group-header"><td class="'+F1+'">'+g.label+'</td><td class="'+F2+'"></td><td colspan="4"></td></tr>';
+    gr.forEach(function(r){ body+=schedRow(r.semKey,r.course,r.campus,r.si,r.e,r.extra||false); });
+  });
+  return '<table><thead>'+hdr+'</thead><tbody>'+body+'</tbody></table>';
+}
+
+function buildAddPanel(semKey,campusFilter,tableRows,intersession){
+  function sq(s){ return "'"+String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'"; }
+  var semKeyQ=sq(semKey);
+  var html='';
+
+  // Removed sections
+  var removed=[];
+  if(scheduleData[semKey]){
+    Object.keys(scheduleData[semKey]).forEach(function(k){
+      if(scheduleData[semKey][k]!==null) return;
+      var parts=k.split('|'), course=parts[0], campus=parts[1], si=parseInt(parts[2]);
+      if(campusFilter&&campus!==campusFilter) return;
+      if(intersession){
+        // For intersession: only show if it had history
+        var season=schedSeason(semKey);
+        var hasHist=semRows.some(function(r){return r.course===course&&r.campus===campus&&Object.keys(r.data).some(function(t){return getSeason(t)===season&&r.data[t]!=null;});});
+        if(hasHist) removed.push({course:course,campus:campus,si:si});
+      } else {
+        // For regular: check if it was in the schedule table
+        var entry=SCHEDULE_TABLE.find(function(e){return e.course===course&&e.campus===campus;});
+        if(entry) removed.push({course:course,campus:campus,si:si});
+      }
+    });
+  }
+  if(removed.length){
+    html+='<div style="margin-bottom:.6rem"><span style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.05em">Restore removed:</span><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">';
+    removed.forEach(function(r){
+      var cb=r.campus==='Starkville'?'badge-stk':'badge-oe';
+      html+='<button class="btn btn-sm" onclick="schedRestore('+sq(semKey)+','+sq(r.course)+','+sq(r.campus)+','+r.si+')"><span class="badge '+cb+'" style="font-size:9px">'+r.campus+'</span> '+r.course+'</button>';
+    });
+    html+='</div></div>';
+  }
+
+  // Extra section for existing courses
+  if(!intersession){
+    var canAdd=SCHEDULE_TABLE.filter(function(e){
+      if(campusFilter&&e.campus!==campusFilter) return false;
+      return true;
+    });
+    if(canAdd.length){
+      html+='<div style="margin-bottom:.6rem"><span style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.05em">Add extra section:</span><div style="margin-top:4px">';
+      html+='<select id="extra-sec-sel" style="font-size:12px;padding:5px 8px;margin-right:6px"><option value="">Select course...</option>';
+      canAdd.forEach(function(e){ html+='<option value="'+e.course+'|'+e.campus+'">'+e.course+' ('+e.campus+')</option>'; });
+      html+='</select><button class="btn btn-sm btn-success" onclick="(function(){var v=document.getElementById(\'extra-sec-sel\').value;if(v){var p=v.split(\'|\');schedAddExtra('+semKeyQ+',p[0],p[1]);}})()">+ Add section</button></div></div>';
+    }
+  }
+
+  // Add course not in current view
+  var currentCourses=new Set(tableRows.map(function(r){return r.course+'|'+r.campus;}));
+  var addable=[];
+  var addSeen=new Set();
+  semRows.forEach(function(r){
+    if(campusFilter&&r.campus!==campusFilter) return;
+    var k=r.course+'|'+r.campus;
+    if(!currentCourses.has(k)&&!addSeen.has(k)){addSeen.add(k);addable.push({course:r.course,campus:r.campus});}
+  });
+  if(addable.length){
+    html+='<div><span style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.05em">Add course:</span><div style="margin-top:4px">';
+    html+='<select id="extra-course-sel" style="font-size:12px;padding:5px 8px;margin-right:6px"><option value="">Select course...</option>';
+    addable.forEach(function(a){ html+='<option value="'+a.course+'|'+a.campus+'">'+a.course+' ('+a.campus+')</option>'; });
+    html+='</select><button class="btn btn-sm btn-success" onclick="schedAddCourse('+semKeyQ+',document.getElementById(\'extra-course-sel\').value)">+ Add</button></div></div>';
+  }
+
+  return html||'<span style="color:var(--text-tertiary);font-size:12px;font-style:italic">Nothing to add or restore.</span>';
+}
+
+function renderSchedule(){
+  var semKey=document.getElementById('sched-semester').value;
+  var campusFilter=document.getElementById('sched-campus').value;
+  var idx=semToIdx(semKey);
+  var season=schedSeason(semKey);
+  var isInter=(idx===-1);
+
+  var rows=[];
+
+  if(isInter){
+    // Intersession: populate from historical data
+    var seen=new Set();
+    semRows.forEach(function(r){
+      if(campusFilter&&r.campus!==campusFilter) return;
+      var k=r.course+'|'+r.campus;
+      if(seen.has(k)) return;
+      var hasHist=Object.keys(r.data).some(function(t){return getSeason(t)===season&&r.data[t]!=null;});
+      if(!hasHist) return;
+      seen.add(k);
+      if(scheduleData[semKey]&&scheduleData[semKey][r.course+'|'+r.campus+'|0']===null) return;
+      var e=schedEntry(semKey,r.course,r.campus,0);
+      if(e) rows.push({semKey:semKey,course:r.course,campus:r.campus,si:0,e:e});
+    });
+    // Explicitly added courses for this intersession
+    if(scheduleData[semKey]){
+      Object.keys(scheduleData[semKey]).forEach(function(k){
+        if(scheduleData[semKey][k]===null) return;
+        var parts=k.split('|'), course=parts[0], campus=parts[1], si=parseInt(parts[2]);
+        if(campusFilter&&campus!==campusFilter) return;
+        var ck=course+'|'+campus;
+        if(!seen.has(ck)){
+          seen.add(ck);
+          rows.push({semKey:semKey,course:course,campus:campus,si:si,e:scheduleData[semKey][k],extra:true});
+        }
+      });
+    }
+  } else {
+    // Regular semester: use SCHEDULE_TABLE
+    SCHEDULE_TABLE.forEach(function(entry){
+      if(campusFilter&&entry.campus!==campusFilter) return;
+      entry.sections.forEach(function(pat,si){
+        if(!pat[idx]) return;
+        if(scheduleData[semKey]&&scheduleData[semKey][entry.course+'|'+entry.campus+'|'+si]===null) return;
+        var e=schedEntry(semKey,entry.course,entry.campus,si);
+        if(e) rows.push({semKey:semKey,course:entry.course,campus:entry.campus,si:si,e:e});
+      });
+      // Extra sections (si >= 100)
+      if(scheduleData[semKey]){
+        Object.keys(scheduleData[semKey]).forEach(function(k){
+          var parts=k.split('|'), course=parts[0], campus=parts[1], si=parseInt(parts[2]);
+          if(course!==entry.course||campus!==entry.campus||si<100) return;
+          if(scheduleData[semKey][k]===null) return;
+          if(campusFilter&&campus!==campusFilter) return;
+          rows.push({semKey:semKey,course:course,campus:campus,si:si,e:scheduleData[semKey][k],extra:true});
+        });
+      }
+    });
+    // Fully extra courses not in table
+    if(scheduleData[semKey]){
+      var tableCourses=new Set(SCHEDULE_TABLE.map(function(e){return e.course+'|'+e.campus;}));
+      Object.keys(scheduleData[semKey]).forEach(function(k){
+        if(scheduleData[semKey][k]===null) return;
+        var parts=k.split('|'), course=parts[0], campus=parts[1], si=parseInt(parts[2]);
+        if(campusFilter&&campus!==campusFilter) return;
+        if(!tableCourses.has(course+'|'+campus)){
+          rows.push({semKey:semKey,course:course,campus:campus,si:si,e:scheduleData[semKey][k],extra:true});
+        }
+      });
+    }
+  }
+
+  // Metrics
+  var unassigned=rows.filter(function(r){return !r.e.instructor;}).length;
+  var semLabel=semKey.replace(/([A-Za-z]+)(\d+)/,'$1 20$2');
+  var subLabel=(campusFilter||'All campuses')+(isInter?' \u00b7 from historical data':'');
+  document.getElementById('sched-metrics').innerHTML=
+    '<div class="metric"><div class="metric-label">Semester</div><div class="metric-value" style="font-size:18px">'+semLabel+'</div><div class="metric-sub">'+subLabel+'</div></div>'+
+    '<div class="metric"><div class="metric-label">Sections</div><div class="metric-value">'+rows.length+'</div><div class="metric-sub">scheduled</div></div>'+
+    '<div class="metric"><div class="metric-label">Needs instructor</div><div class="metric-value" style="color:'+(unassigned?'var(--danger)':'var(--success)')+'">'+unassigned+'</div><div class="metric-sub">of '+rows.length+' sections</div></div>';
+
+  if(!rows.length){
+    document.getElementById('sched-table-wrap').innerHTML=
+      '<div style="padding:2rem;text-align:center;color:var(--text-tertiary);font-style:italic;font-size:13px">No courses found for this semester. Use + Add / Restore to add courses manually.</div>';
+  } else {
+    document.getElementById('sched-table-wrap').innerHTML=buildSchedTable(rows);
+  }
+
+  rows.sort(rowSort);
+  document.getElementById('sched-add-panel').innerHTML=buildAddPanel(semKey,campusFilter,rows,isInter);
+  renderSchedLoad(rows, semKey);
+}
+
+function renderSchedLoad(rows, semKey){
+  // Designated loads: fall load : spring load (Summer/Winter = overload, not counted)
+  var LOAD_TARGETS = {
+    'Abernathy':      {fall:4, spring:4},
+    'Bell':           {fall:4, spring:4},
+    'Gainer':         {fall:4, spring:4},
+    'Gallo':          {fall:2, spring:3},
+    'Garemani':       {fall:3, spring:2},
+    'Karami':         {fall:3, spring:2},
+    'Parra Martinez': {fall:4, spring:4},
+    'Wei':            {fall:2, spring:3}
+  };
+
+  var season = schedSeason(semKey); // 'Fall', 'Spring', 'Summer', 'Winter'
+  var isCounted = (season === 'Fall' || season === 'Spring');
+
+  // Tally assigned sections per instructor
+  var tally = {};
+  rows.forEach(function(r){
+    var instr = (r.e && r.e.instructor) || '';
+    if(!instr) instr = '(unassigned)';
+    tally[instr] = (tally[instr] || 0) + 1;
+  });
+
+  // Also ensure every named instructor appears even if they have 0 sections this semester
+  if(isCounted){
+    Object.keys(LOAD_TARGETS).forEach(function(name){
+      if(!(name in tally)) tally[name] = 0;
+    });
+  }
+
+  var instructors = Object.keys(tally).sort(function(a,b){
+    if(a === '(unassigned)') return 1;
+    if(b === '(unassigned)') return -1;
+    // Named instructors first, sorted alpha
+    var aKnown = a in LOAD_TARGETS, bKnown = b in LOAD_TARGETS;
+    if(aKnown !== bKnown) return aKnown ? -1 : 1;
+    return a.localeCompare(b);
+  });
+
+  if(!instructors.length){
+    document.getElementById('sched-load-panel').innerHTML = '';
+    return;
+  }
+
+  var totalSections = rows.length;
+  var cards = '';
+
+  instructors.forEach(function(instr){
+    var count = tally[instr];
+    var isUnassigned = (instr === '(unassigned)');
+    var target = LOAD_TARGETS[instr] || null;
+    var designated = target ? (season === 'Fall' ? target.fall : season === 'Spring' ? target.spring : null) : null;
+
+    // Status logic
+    var statusHtml = '';
+    var borderColor = 'var(--border)';
+    var countColor = 'var(--text)';
+
+    if(isUnassigned){
+      borderColor = 'var(--danger)';
+      countColor = 'var(--danger)';
+    } else if(designated !== null){
+      if(count === designated){
+        // Met exactly
+        borderColor = 'var(--success)';
+        countColor = 'var(--success)';
+        statusHtml = '<div style="font-size:10px;font-weight:700;color:var(--success);margin-top:4px">✓ Load met ('+designated+')</div>';
+      } else if(count < designated){
+        var under = designated - count;
+        borderColor = '#d97706';
+        countColor = '#d97706';
+        statusHtml = '<div style="font-size:10px;font-weight:700;color:#d97706;margin-top:4px">'+under+' short of '+designated+'</div>';
+      } else {
+        var over = count - designated;
+        borderColor = 'var(--danger)';
+        countColor = 'var(--danger)';
+        statusHtml = '<div style="font-size:10px;font-weight:700;color:var(--danger);margin-top:4px">+'+over+' over designated '+designated+'</div>';
+      }
+    } else if(!isCounted){
+      // Summer / Winter — no target, just show count with a note
+      statusHtml = '<div style="font-size:10px;color:var(--text-tertiary);margin-top:4px;font-style:italic">Overload semester</div>';
+    }
+
+    // Progress bar: if we have a target, fill relative to it (can exceed 100%)
+    var barPct, barMax;
+    if(designated){
+      barPct = Math.min(Math.round(count / designated * 100), 100);
+      barMax = designated;
+    } else {
+      barPct = totalSections > 0 ? Math.round(count / totalSections * 100) : 0;
+      barMax = null;
+    }
+
+    cards +=
+      '<div style="background:var(--bg);border:1px solid '+borderColor+';border-radius:var(--radius);padding:.75rem 1rem;min-width:160px;flex:1 1 160px;max-width:230px;box-shadow:var(--shadow)">'+
+        '<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+instr+'">'+
+          (isUnassigned ? '<span style="color:var(--danger)">'+instr+'</span>' : instr)+
+        '</div>'+
+        '<div style="display:flex;align-items:baseline;gap:5px;margin-bottom:6px">'+
+          '<span style="font-size:22px;font-weight:700;color:'+countColor+';line-height:1">'+count+'</span>'+
+          '<span style="font-size:11px;color:var(--text-tertiary)">'+
+            (designated !== null ? '/ '+designated+' sections' : 'section'+(count===1?'':'s'))+
+          '</span>'+
+        '</div>'+
+        '<div style="height:4px;border-radius:2px;background:var(--bg-tertiary);overflow:hidden">'+
+          '<div style="height:100%;width:'+barPct+'%;background:'+borderColor+';border-radius:2px;transition:width .3s"></div>'+
+        '</div>'+
+        statusHtml+
+      '</div>';
+  });
+
+  var seasonNote = isCounted
+    ? ' &middot; <span style="color:var(--text-tertiary)">'+season+' designated loads shown</span>'
+    : ' &middot; <span style="color:var(--text-tertiary);font-style:italic">Summer/Winter = overload (no designated target)</span>';
+
+  document.getElementById('sched-load-panel').innerHTML =
+    '<div style="margin-bottom:.6rem">'+
+      '<span style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em">Instructor Load</span>'+
+      '<span style="font-size:11px;color:var(--text-tertiary)"> — '+totalSections+' section'+(totalSections===1?'':'s')+' total'+seasonNote+'</span>'+
+    '</div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:10px">'+cards+'</div>';
+}
+
+
+// ═══════════════════════════════════════════════
+//  WEEK CALENDAR TAB
+// ═══════════════════════════════════════════════
+
+// Parse a SLOT_OPTS string into {days:['M','W','F'], startMin:420, endMin:470}
+// Returns null for Online/Async, TBD, or unrecognised slots
+function parseSlot(slot){
+  if(!slot || slot==='Online/Async' || slot==='TBD') return null;
+  // e.g. "MWF 10:00 am - 10:50 am"  or  "TR 9:30 am - 10:45 am"
+  var m = slot.match(/^([A-Za-z]+)\s+(\d+):(\d+)\s*(am|pm)\s*-\s*(\d+):(\d+)\s*(am|pm)/i);
+  if(!m) return null;
+  var dayStr=m[1], sh=parseInt(m[2]), sm=parseInt(m[3]), sap=m[4].toLowerCase(),
+      eh=parseInt(m[5]), em=parseInt(m[6]), eap=m[7].toLowerCase();
+
+  function toMin(h,min,ap){
+    if(ap==='pm' && h!==12) h+=12;
+    if(ap==='am' && h===12) h=0;
+    return h*60+min;
+  }
+  var startMin=toMin(sh,sm,sap), endMin=toMin(eh,em,eap);
+
+  // Expand day codes
+  var DAY_MAP={'M':['M'],'T':['T'],'W':['W'],'R':['R'],
+               'MWF':['M','W','F'],'TR':['T','R'],'MW':['M','W']};
+  var days=DAY_MAP[dayStr]||[];
+  if(!days.length) return null;
+  return {days:days, startMin:startMin, endMin:endMin, label:slot};
+}
+
+function renderCalendar(){
+  var semKey=document.getElementById('cal-semester').value;
+  var campusFilter=document.getElementById('cal-campus').value;
+
+  // Gather all scheduled sections for this semester (same logic as renderSchedule)
+  var idx=semToIdx(semKey);
+  var season=schedSeason(semKey);
+  var isInter=(idx===-1);
+  var allRows=[];
+
+  if(isInter){
+    var seen=new Set();
+    semRows.forEach(function(r){
+      if(campusFilter&&r.campus!==campusFilter) return;
+      var k=r.course+'|'+r.campus;
+      if(seen.has(k)) return;
+      var hasHist=Object.keys(r.data).some(function(t){return getSeason(t)===season&&r.data[t]!=null;});
+      if(!hasHist) return;
+      seen.add(k);
+      if(scheduleData[semKey]&&scheduleData[semKey][r.course+'|'+r.campus+'|0']===null) return;
+      var e=schedEntry(semKey,r.course,r.campus,0);
+      if(e) allRows.push({course:r.course,campus:r.campus,e:e});
+    });
+    if(scheduleData[semKey]){
+      Object.keys(scheduleData[semKey]).forEach(function(k){
+        if(scheduleData[semKey][k]===null) return;
+        var parts=k.split('|'),course=parts[0],campus=parts[1];
+        if(campusFilter&&campus!==campusFilter) return;
+        var ck=course+'|'+campus;
+        if(!seen.has(ck)){ seen.add(ck); allRows.push({course:course,campus:campus,e:scheduleData[semKey][k]}); }
+      });
+    }
+  } else {
+    SCHEDULE_TABLE.forEach(function(entry){
+      if(campusFilter&&entry.campus!==campusFilter) return;
+      entry.sections.forEach(function(pat,si){
+        if(!pat[idx]) return;
+        if(scheduleData[semKey]&&scheduleData[semKey][entry.course+'|'+entry.campus+'|'+si]===null) return;
+        var e=schedEntry(semKey,entry.course,entry.campus,si);
+        if(e) allRows.push({course:entry.course,campus:entry.campus,e:e});
+      });
+      if(scheduleData[semKey]){
+        Object.keys(scheduleData[semKey]).forEach(function(k){
+          var parts=k.split('|'),course=parts[0],campus=parts[1],si=parseInt(parts[2]);
+          if(course!==entry.course||campus!==entry.campus||si<100) return;
+          if(scheduleData[semKey][k]===null) return;
+          if(campusFilter&&campus!==campusFilter) return;
+          allRows.push({course:course,campus:campus,e:scheduleData[semKey][k]});
+        });
+      }
+    });
+    if(scheduleData[semKey]){
+      var tableCourses=new Set(SCHEDULE_TABLE.map(function(e){return e.course+'|'+e.campus;}));
+      Object.keys(scheduleData[semKey]).forEach(function(k){
+        if(scheduleData[semKey][k]===null) return;
+        var parts=k.split('|'),course=parts[0],campus=parts[1],si=parseInt(parts[2]);
+        if(campusFilter&&campus!==campusFilter) return;
+        if(!tableCourses.has(course+'|'+campus)){
+          allRows.push({course:course,campus:campus,e:scheduleData[semKey][k]});
+        }
+      });
+    }
+  }
+
+  // Parse slots and build a map: day -> list of {startMin, endMin, course, campus, instructor}
+  var DAYS=['M','T','W','R','F'];
+  var DAY_LABELS={'M':'Monday','T':'Tuesday','W':'Wednesday','R':'Thursday','F':'Friday'};
+  var dayMap={'M':[],'T':[],'W':[],'R':[],'F':[]};
+  var unscheduled=0;
+
+  allRows.forEach(function(r){
+    if(r.course==='EPY 3143') return; // excluded from calendar
+    var slot=r.e.slot||r.e.days||'';
+    var parsed=parseSlot(slot);
+    if(!parsed){ unscheduled++; return; }
+    parsed.days.forEach(function(d){
+      if(dayMap[d]){
+        dayMap[d].push({
+          startMin:parsed.startMin, endMin:parsed.endMin,
+          course:r.course, campus:r.campus,
+          instructor:r.e.instructor||'',
+          slot:slot
+        });
+      }
+    });
+  });
+
+  // Determine time range across all placed sections (round to nearest hour boundary)
+  var allMins=[];
+  DAYS.forEach(function(d){ dayMap[d].forEach(function(b){ allMins.push(b.startMin,b.endMin); }); });
+  if(!allMins.length){
+    document.getElementById('cal-wrap').innerHTML=
+      '<div style="padding:2rem;text-align:center;color:var(--text-tertiary);font-style:italic;font-size:13px">No sections with scheduled time slots found for this semester.</div>';
+    document.getElementById('cal-conflict-banner').style.display='none';
+    return;
+  }
+
+  var minTime=Math.floor(Math.min.apply(null,allMins)/60)*60;
+  var maxTime=Math.ceil(Math.max.apply(null,allMins)/60)*60;
+
+  // Build 30-min row slots
+  var timeSlots=[];
+  for(var t=minTime;t<maxTime;t+=30) timeSlots.push(t);
+
+  // Detect conflicts: only flag Starkville EPY 4xxx courses (excluding EPY 4214) overlapping each other
+  function isConflictable(course, campus){
+    if(campus !== 'Starkville') return false;
+    var m=course.match(/EPY (\d+)/);
+    if(!m) return false;
+    var n=parseInt(m[1]);
+    return n>=4000 && n<5000 && n!==4214;
+  }
+  var conflicts=[];
+  var conflictKeys=new Set();
+  DAYS.forEach(function(d){
+    var blocks=dayMap[d];
+    for(var i=0;i<blocks.length;i++){
+      for(var j=i+1;j<blocks.length;j++){
+        var a=blocks[i],b=blocks[j];
+        if(isConflictable(a.course,a.campus) && isConflictable(b.course,b.campus) &&
+           a.startMin<b.endMin && b.startMin<a.endMin){
+          conflicts.push(d+': '+a.course+' overlaps with '+b.course+' at '+a.slot);
+          conflictKeys.add(a.course+'|'+a.campus);
+          conflictKeys.add(b.course+'|'+b.campus);
+        }
+      }
+    }
+  });
+
+  // Helper: format minutes -> "7:00 am"
+  function fmtMin(m){
+    var h=Math.floor(m/60), min=m%60, ap=h>=12?'pm':'am';
+    if(h>12)h-=12; if(h===0)h=12;
+    return h+':'+(min<10?'0':'')+min+' '+ap;
+  }
+
+  // Build calendar using absolute positioning — each 30-min slot = 30px tall,
+  // so a block from startMin to endMin is placed at top=(startMin-minTime)px, height=(endMin-startMin)px.
+  var activeDays=DAYS.filter(function(d){ return dayMap[d].length>0; });
+  if(!activeDays.length) activeDays=DAYS;
+
+  var SLOT_H = 30; // px per 30-minute slot
+  var totalMinutes = maxTime - minTime;
+  var totalHeight = (totalMinutes / 30) * SLOT_H;
+
+  // Time column: label every 30 min
+  var timeLbls = '';
+  timeSlots.forEach(function(t){
+    timeLbls += '<div class="cal-slot-lbl">'+fmtMin(t)+'</div>';
+  });
+
+  // Day columns
+  var dayCols = '';
+  activeDays.forEach(function(d){
+    // Background slots (grid lines)
+    var bgSlots = '';
+    timeSlots.forEach(function(){ bgSlots += '<div class="cal-slot-bg"></div>'; });
+
+    // Assign columns to blocks so simultaneous courses sit side-by-side.
+    // Step 1: sort by start time
+    var sorted = dayMap[d].slice().sort(function(a,b){ return a.startMin-b.startMin; });
+
+    // Step 2: greedy column assignment — assign each block to the first column
+    // whose last occupant has already ended
+    var colEnds = []; // colEnds[i] = endMin of most recent block in column i
+    var blockCol = sorted.map(function(b){
+      var c = 0;
+      while(colEnds[c] !== undefined && colEnds[c] > b.startMin) c++;
+      colEnds[c] = b.endMin;
+      return c;
+    });
+
+    // Step 3: for each block, find how many blocks overlap with it
+    // so we can set width = 1 / (number of simultaneous blocks)
+    var blockWidth = sorted.map(function(b, bi){
+      var simultaneous = sorted.filter(function(other){
+        return other.startMin < b.endMin && other.endMin > b.startMin;
+      }).length;
+      return 1 / simultaneous;
+    });
+
+    var blocks = '';
+    sorted.forEach(function(b, bi){
+      var isConflict = conflictKeys.has(b.course+'|'+b.campus);
+      var cls = isConflict ? 'cal-block cal-block-conflict' : 'cal-block cal-block-normal';
+      var top    = ((b.startMin - minTime) / 30) * SLOT_H;
+      var height = Math.max(SLOT_H, ((b.endMin - b.startMin) / 30) * SLOT_H) - 3;
+      var w      = (blockWidth[bi] * 100).toFixed(2) + '%';
+      var l      = (blockCol[bi] * blockWidth[bi] * 100).toFixed(2) + '%';
+      blocks +=
+        '<div class="'+cls+'" style="top:'+top+'px;height:'+height+'px;left:'+l+';width:'+w+'">'+
+          '<div class="cal-block-name">'+b.course+'</div>'+
+          (b.instructor?'<div class="cal-block-instr">'+b.instructor+'</div>':'')+
+          '<div class="cal-block-instr" style="font-size:9px;opacity:.65">'+
+            fmtMin(b.startMin)+' – '+fmtMin(b.endMin)+
+          '</div>'+
+        '</div>';
+    });
+
+    dayCols +=
+      '<div class="cal-day">'+
+        '<div class="cal-day-header">'+DAY_LABELS[d]+'</div>'+
+        '<div class="cal-day-body" style="position:relative;height:'+totalHeight+'px">'+
+          bgSlots+blocks+
+        '</div>'+
+      '</div>';
+  });
+
+  var html =
+    '<div class="cal-outer">'+
+      '<div class="cal-table">'+
+        '<div class="cal-time-col">'+
+          '<div class="cal-time-header">Time</div>'+
+          '<div class="cal-time-body">'+timeLbls+'</div>'+
+        '</div>'+
+        '<div class="cal-day-cols">'+dayCols+'</div>'+
+      '</div>'+
+    '</div>';
+
+  document.getElementById('cal-wrap').innerHTML = html;
+
+  // Conflict banner
+  var banner=document.getElementById('cal-conflict-banner');
+  if(conflicts.length){
+    banner.style.display='block';
+    banner.innerHTML='⚠ '+conflicts.length+' scheduling conflict'+(conflicts.length===1?'':'s')+' detected:<ul style="margin:.4rem 0 0 1.2rem;font-weight:400">'+
+      conflicts.map(function(c){return '<li>'+c+'</li>';}).join('')+'</ul>';
+  } else {
+    banner.style.display='none';
+  }
+}
+
+function exportScheduleCSV(){
+  // Export ALL semesters from scheduleData so the full schedule can be reimported
+  var exportRows=[];
+  Object.keys(scheduleData).forEach(function(semKey){
+    if(!scheduleData[semKey]) return;
+    Object.keys(scheduleData[semKey]).forEach(function(k){
+      var entry=scheduleData[semKey][k];
+      // null = explicitly removed section; export it so import can restore the removal
+      var parts=k.split('|'), course=parts[0], campus=parts[1], si=parts[2];
+      var instructor='', slot='';
+      if(entry && entry !== null){ instructor=entry.instructor||''; slot=entry.slot||entry.days||''; }
+      var removed=(entry===null)?'1':'';
+      exportRows.push([
+        '"'+semKey+'"','"'+course+'"','"'+campus+'"','"'+si+'"',
+        '"'+instructor+'"','"'+slot+'"','"'+removed+'"'
+      ].join(','));
+    });
+  });
+
+  var csv=['Semester,Course,Campus,Section,Instructor,Schedule,Removed'].concat(exportRows).join('\r\n');
+  var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='EPY_schedule_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  showStatus('\u2713 Schedule exported — all semesters');
+}
+
+function importScheduleCSV(evt){
+  var file=evt.target.files[0];
+  if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    _processScheduleCSV(e.target.result.replace(/^\uFEFF/,''));
+  };
+  reader.readAsText(file);
+  evt.target.value='';
+}
+function _processScheduleCSV(text){
+  try{
+      var lines=text.split(/\r?\n/).filter(function(l){return l.trim();});
+      if(lines.length<2) throw new Error('File appears empty');
+      var headers=parseCSVLine(lines[0]).map(function(h){return h.trim().toLowerCase();});
+      var semIdx=headers.indexOf('semester');
+      var courseIdx=headers.indexOf('course');
+      var campusIdx=headers.indexOf('campus');
+      var siIdx=headers.indexOf('section');
+      var instrIdx=headers.indexOf('instructor');
+      var slotIdx=headers.indexOf('schedule');
+      var removedIdx=headers.indexOf('removed');
+
+      if(courseIdx<0||campusIdx<0){
+        throw new Error('Missing required columns (Course, Campus).');
+      }
+
+      // Detect old format (no Semester or Section columns) vs new format
+      var isOldFormat=(semIdx<0||siIdx<0);
+
+      // For old format, load into whichever semester is currently selected
+      var currentSemKey=document.getElementById('sched-semester').value;
+
+      var newScheduleData={};
+      // Preserve existing data for other semesters when importing old format
+      if(isOldFormat){
+        Object.keys(scheduleData).forEach(function(k){
+          if(k!==currentSemKey) newScheduleData[k]=scheduleData[k];
+        });
+      }
+
+      var count=0;
+      lines.slice(1).forEach(function(line){
+        if(!line.trim()) return;
+        var cols=parseCSVLine(line);
+        var course=(cols[courseIdx]||'').trim();
+        var campus=(cols[campusIdx]||'').trim();
+        if(!course||!campus) return;
+
+        var semKey=isOldFormat ? currentSemKey : (cols[semIdx]||'').trim();
+        var si=(!isOldFormat&&siIdx>=0) ? parseInt((cols[siIdx]||'0').trim()) : 0;
+        var instructor=instrIdx>=0?(cols[instrIdx]||'').trim():'';
+        var slot=slotIdx>=0?(cols[slotIdx]||'').trim():'';
+        var removed=removedIdx>=0?(cols[removedIdx]||'').trim()==='1':false;
+
+        if(!semKey) return;
+        if(!newScheduleData[semKey]) newScheduleData[semKey]={};
+        var k=course+'|'+campus+'|'+si;
+        newScheduleData[semKey][k] = removed ? null : {instructor:instructor, slot:slot};
+        count++;
+      });
+
+      if(!count) throw new Error('No valid rows found');
+      scheduleData=newScheduleData;
+      persist();
+      renderSchedule();
+      var semCount=Object.keys(newScheduleData).length;
+      showStatus('\u2713 Schedule imported \u2014 '+count+' entries'+(isOldFormat?' into '+currentSemKey:' across '+semCount+' semesters'));
+  }catch(err){
+    showStatus('\u2717 Import failed: '+err.message, false);
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  EXCEL EXPORT / IMPORT  (SheetJS)
+// ═══════════════════════════════════════════════
+function exportExcel(){
+  if(typeof XLSX === 'undefined'){ showStatus('\u2717 SheetJS not loaded — check your internet connection', false); return; }
+  var wb = XLSX.utils.book_new();
+
+  // ── Sheet 1: Enrollment ──
+  var termSet = new Set();
+  semRows.forEach(function(r){ Object.keys(r.data).forEach(function(t){ termSet.add(t); }); });
+  allTerms.forEach(function(t){ termSet.add(t); });
+  var termList = Array.from(termSet).sort(termSort);
+  var enrollHeader = ['Course','Campus','Sections'].concat(termList);
+  var enrollData = [enrollHeader];
+  semRows.forEach(function(r){
+    var row = [r.course, r.campus, r.sections!=null?r.sections:''];
+    termList.forEach(function(t){ row.push(r.data[t]!=null?r.data[t]:''); });
+    enrollData.push(row);
+  });
+  var ws1 = XLSX.utils.aoa_to_sheet(enrollData);
+  // Column widths
+  ws1['!cols'] = [{wch:18},{wch:12},{wch:9}].concat(termList.map(function(){ return {wch:9}; }));
+  XLSX.utils.book_append_sheet(wb, ws1, 'Enrollment');
+
+  // ── Sheet 2: Schedule ──
+  var schedHeader = ['Semester','Course','Campus','Section','Instructor','Schedule','Removed'];
+  var schedData = [schedHeader];
+  Object.keys(scheduleData).forEach(function(semKey){
+    if(!scheduleData[semKey]) return;
+    Object.keys(scheduleData[semKey]).forEach(function(k){
+      var entry = scheduleData[semKey][k];
+      var parts = k.split('|'), course=parts[0], campus=parts[1], si=parts[2];
+      var instructor='', slot='', removed=0;
+      if(entry === null){ removed = 1; }
+      else if(entry){ instructor=entry.instructor||''; slot=entry.slot||entry.days||''; }
+      schedData.push([semKey, course, campus, parseInt(si), instructor, slot, removed]);
+    });
+  });
+  var ws2 = XLSX.utils.aoa_to_sheet(schedData);
+  ws2['!cols'] = [{wch:10},{wch:18},{wch:12},{wch:9},{wch:16},{wch:28},{wch:9}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Schedule');
+
+  XLSX.writeFile(wb, 'EPY_data_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  showStatus('\u2713 Excel exported \u2014 Enrollment + Schedule sheets');
+}
+
+function importExcelFromBuffer(buffer){
+  if(typeof XLSX === 'undefined'){ showStatus('\u2717 SheetJS not loaded — check your internet connection', false); return; }
+  try{
+    var data = new Uint8Array(buffer);
+    var wb = XLSX.read(data, {type:'array', raw:true, cellText:false});
+
+    // Find sheets by name, case-insensitive prefix match
+    function findSheet(wb, prefix){
+      var key = wb.SheetNames.find(function(n){ return n.toLowerCase().indexOf(prefix.toLowerCase())===0; });
+      return key ? wb.Sheets[key] : null;
+    }
+
+    var enrollLoaded=false, schedLoaded=false;
+
+    // ── Enrollment sheet ──
+    var ws1 = findSheet(wb, 'Enrollment');
+      if(ws1){
+        var rows = XLSX.utils.sheet_to_json(ws1, {header:1, defval:''});
+        if(rows.length>=2){
+          var hdr = rows[0].map(function(h){ return String(h).trim().toLowerCase(); });
+          var courseIdx=hdr.indexOf('course'), campusIdx=hdr.indexOf('campus'), secIdx=hdr.indexOf('sections');
+          if(courseIdx>=0 && campusIdx>=0){
+            var termCols=[];
+            hdr.forEach(function(h,i){
+              if(i!==courseIdx&&i!==campusIdx&&i!==secIdx&&h!=='') termCols.push({h:String(rows[0][i]).trim(),i:i});
+            });
+            var newRows=[], newTerms=new Set(allTerms);
+            rows.slice(1).forEach(function(row){
+              var course=String(row[courseIdx]||'').trim();
+              var campus=String(row[campusIdx]||'').trim();
+              if(!course||!campus) return;
+              var sections=secIdx>=0&&row[secIdx]!==''?parseFloat(row[secIdx]):null;
+              var rowData={};
+              termCols.forEach(function(tc){
+                var val=String(row[tc.i]||'').trim();
+                if(val!==''&&!isNaN(val)){ rowData[tc.h]=parseInt(val); newTerms.add(tc.h); }
+              });
+              newRows.push({course:normalizeCourse(course,campus),campus:campus,sections:sections,data:rowData});
+            });
+            if(newRows.length){
+              semRows=newRows;
+              sanitizeSemRows();
+              allTerms=Array.from(newTerms).sort(termSort);
+              rebuildCourseFilter();
+              document.getElementById('sem-course-filter').value='';
+              renderSemester();
+              if(document.getElementById('tab-ay').style.display!=='none') renderAY();
+              enrollLoaded=true;
+            }
+          }
+        }
+      }
+
+      // ── Schedule sheet ──
+      var ws2 = findSheet(wb, 'Schedule');
+      if(ws2){
+        var srows = XLSX.utils.sheet_to_json(ws2, {header:1, defval:''});
+        if(srows.length>=2){
+          var shdr = srows[0].map(function(h){ return String(h).trim().toLowerCase(); });
+          var semIdx=shdr.indexOf('semester'), courseIdx2=shdr.indexOf('course');
+          var campusIdx2=shdr.indexOf('campus'), siIdx=shdr.indexOf('section');
+          var instrIdx=shdr.indexOf('instructor'), slotIdx=shdr.indexOf('schedule');
+          var removedIdx=shdr.indexOf('removed');
+          var currentSemKey=document.getElementById('sched-semester').value;
+          var isOldFmt=(semIdx<0||siIdx<0);
+          var newSched={};
+          if(isOldFmt){
+            Object.keys(scheduleData).forEach(function(k){ if(k!==currentSemKey) newSched[k]=scheduleData[k]; });
+          }
+          var schedCount=0;
+          srows.slice(1).forEach(function(row){
+            var course=String(row[courseIdx2]||'').trim();
+            var campus=String(row[campusIdx2]||'').trim();
+            if(!course||!campus) return;
+            var semKey=isOldFmt?currentSemKey:String(row[semIdx]||'').trim();
+            var si=(!isOldFmt&&siIdx>=0)?parseInt(row[siIdx]||0):0;
+            var instructor=instrIdx>=0?String(row[instrIdx]||'').trim():'';
+            var slot=slotIdx>=0?String(row[slotIdx]||'').trim():'';
+            var removed=removedIdx>=0?(String(row[removedIdx]||'').trim()==='1'||row[removedIdx]===1):false;
+            if(!semKey) return;
+            if(!newSched[semKey]) newSched[semKey]={};
+            newSched[semKey][course+'|'+campus+'|'+si] = removed?null:{instructor:instructor,slot:slot};
+            schedCount++;
+          });
+          if(schedCount){ scheduleData=newSched; renderSchedule(); schedLoaded=true; }
+        }
+      }
+
+      persist();
+      if(enrollLoaded||schedLoaded){
+        var msg='\u2713 Imported:';
+        if(enrollLoaded) msg+=' Enrollment';
+        if(enrollLoaded&&schedLoaded) msg+=' +';
+        if(schedLoaded) msg+=' Schedule';
+        showStatus(msg);
+      } else {
+        showStatus('\u2717 No recognised sheets found. Expected sheets named Enrollment and/or Schedule.', false);
+      }
+  }catch(err){
+    showStatus('\u2717 Import failed: '+err.message, false);
+  }
+}
+
+</script>
+</body>
+</html>
