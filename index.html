@@ -493,13 +493,11 @@ const DEFAULT_DATA = [{"course":"EPY 2513","campus":"Starkville","sections":3,"d
 let semRows = JSON.parse(JSON.stringify(DEFAULT_DATA));
 let allTerms = [...new Set(AY_DEFS.flatMap(d=>d.terms))];
 allTerms.sort(termSort);
-let scheduleData = {};  // populated by initScheduleData() after DEFAULT_SCHEDULE is defined
-let ayFlags = {};
 
 // ═══════════════════════════════════════════════
 //  PERSISTENCE (localStorage — works on GitHub Pages)
 // ═══════════════════════════════════════════════
-const STORAGE_KEY = 'epy_enrollment_shell_v5';
+const STORAGE_KEY = 'epy_enrollment_shell_v3';
 
 function persist(){
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify({semRows:semRows, allTerms:allTerms, scheduleData:scheduleData})); }catch(e){}
@@ -512,9 +510,19 @@ function loadPersisted(){
     if(!raw || typeof raw !== 'string' || raw.trim() === '') return false;
     var p;
     try{ p = JSON.parse(raw); }catch(e){ return false; }
-    if(!p) return false;
-    // Load scheduleData independently — does not require semRows to be present
+    if(!p || !p.semRows || !Array.isArray(p.semRows)) return false;
+    semRows = p.semRows;
+    // Normalize and deduplicate on load
+    sanitizeSemRows();
+    // Merge any DEFAULT_DATA rows not already in saved data (e.g. newly added courses)
+    DEFAULT_DATA.forEach(function(def){
+      var exists = semRows.some(function(r){ return r.course===def.course && r.campus===def.campus; });
+      if(!exists) semRows.push(JSON.parse(JSON.stringify(def)));
+    });
+    if(p.allTerms && Array.isArray(p.allTerms)){ allTerms = p.allTerms; allTerms.sort(termSort); }
     if(p.scheduleData && typeof p.scheduleData === 'object'){
+      // Merge saved data ON TOP of baked-in defaults so default entries are never lost.
+      // Saved entries for the same key overwrite defaults; new semesters are added.
       Object.keys(p.scheduleData).forEach(function(semKey){
         if(!scheduleData[semKey]) scheduleData[semKey] = {};
         Object.keys(p.scheduleData[semKey]).forEach(function(k){
@@ -522,35 +530,8 @@ function loadPersisted(){
         });
       });
     }
-    // Load enrollment data if present
-    if(!p.semRows || !Array.isArray(p.semRows)) return true;
-    semRows = p.semRows;
-    sanitizeSemRows();
-    DEFAULT_DATA.forEach(function(def){
-      var exists = semRows.some(function(r){ return r.course===def.course && r.campus===def.campus; });
-      if(!exists) semRows.push(JSON.parse(JSON.stringify(def)));
-    });
-    if(p.allTerms && Array.isArray(p.allTerms)){ allTerms = p.allTerms; allTerms.sort(termSort); }
     return true;
   }catch(e){ return false; }
-}
-
-// Must be called after DEFAULT_SCHEDULE is defined (line ~1167).
-// Seeds scheduleData with defaults if nothing was loaded from localStorage,
-// and merges defaults into any semesters not already present in saved data.
-function initScheduleData(){
-  Object.keys(DEFAULT_SCHEDULE).forEach(function(semKey){
-    if(!scheduleData[semKey]){
-      scheduleData[semKey] = JSON.parse(JSON.stringify(DEFAULT_SCHEDULE[semKey]));
-    } else {
-      // Ensure default entries exist but don't overwrite saved ones
-      Object.keys(DEFAULT_SCHEDULE[semKey]).forEach(function(k){
-        if(!(k in scheduleData[semKey])){
-          scheduleData[semKey][k] = JSON.parse(JSON.stringify(DEFAULT_SCHEDULE[semKey][k]));
-        }
-      });
-    }
-  });
 }
 
 function clearAll(){
@@ -567,7 +548,20 @@ function clearAll(){
   showStatus('↺ All data cleared');
 }
 
-
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+(function init(){
+  try{
+    var sel = document.getElementById('add-year');
+    for(var y=14;y<=32;y++){
+      var s=yr2(y); var o=document.createElement('option');
+      o.value=s; o.textContent='20'+s; if(y===26)o.selected=true; sel.appendChild(o);
+    }
+    try{ if(loadPersisted()) rebuildCourseFilter(); }catch(e){}
+    renderSemester();
+  }catch(e){ console.error('Init error:', e); }
+})();
 
 // ═══════════════════════════════════════════════
 //  IMPORT / EXPORT
@@ -789,7 +783,12 @@ function getVisibleRows(){
   return semRows.filter(r=>(!cf||r.course===cf)&&(!camp||r.campus===camp)).sort(rowSort);
 }
 function getActiveAYs(rows, rangeN){
-  const active = AY_DEFS.filter(def=>rows.some(r=>def.terms.some(t=>r.data[t]!=null)));
+  const active = AY_DEFS.filter(def=>
+    // Show if any row has data for this AY's terms
+    rows.some(r=>def.terms.some(t=>r.data[t]!=null)) ||
+    // OR if the user explicitly added any of this AY's terms
+    def.terms.some(t=>allTerms.includes(t))
+  );
   if(rangeN==='all') return active;
   return active.slice(-parseInt(rangeN));
 }
@@ -1170,8 +1169,9 @@ function semToIdx(k){
   return -1; // intersession
 }
 
-var DEFAULT_SCHEDULE = {"Fall26":{"EPY 2513|Starkville|0":{"instructor":"","slot":""},"EPY 2513|Starkville|1":{"instructor":"","slot":""},"EPY 3063|Starkville|0":{"instructor":"","slot":""},"EPY 3143|Starkville|0":{"instructor":"","slot":""},"EPY 3143|Starkville|1":{"instructor":"","slot":""},"EPY 3503|Starkville|0":{"instructor":"","slot":""},"EPY 3513|Starkville|0":{"instructor":"","slot":""},"EPY 3543|Starkville|0":{"instructor":"","slot":""},"EPY 4033/6033|Starkville|0":{"instructor":"","slot":""},"EPY 4073|Starkville|0":{"instructor":"","slot":""},"EPY 4214|Starkville|0":{"instructor":"","slot":""},"EPY 4313|Starkville|0":{"instructor":"","slot":""},"EPY 4513|Starkville|0":{"instructor":"","slot":""},"EPY 4553|Starkville|0":{"instructor":"","slot":""},"EPY 6553|Starkville|0":{"instructor":"","slot":""},"EPY 4683|Starkville|0":{"instructor":"","slot":""},"EPY 6214|Starkville|0":{"instructor":"","slot":""},"EPY 8533|Starkville|0":{"instructor":"","slot":""},"EPY 9213|Starkville|0":{"instructor":"","slot":""},"EPY 2513|Online Ed.|0":{"instructor":"","slot":""},"EPY 3503|Online Ed.|0":{"instructor":"","slot":""},"EPY 3513|Online Ed.|0":{"instructor":"","slot":""},"EPY 3543|Online Ed.|0":{"instructor":"","slot":""},"EPY 4033/6033|Online Ed.|0":{"instructor":"","slot":""},"EPY 4073/6073|Online Ed.|0":{"instructor":"","slot":""},"EPY 4214|Online Ed.|0":{"instructor":"","slot":""},"EPY 4513/6513|Online Ed.|0":{"instructor":"","slot":""},"EPY 4553/6553|Online Ed.|0":{"instructor":"","slot":""},"EPY 4683|Online Ed.|0":{"instructor":"","slot":""},"EPY 6214|Online Ed.|0":{"instructor":"","slot":""},"EPY 8293|Online Ed.|0":{"instructor":"","slot":""}}};
-// (scheduleData and ayFlags declared in STATE block above; populated by initScheduleData() in init)
+const DEFAULT_SCHEDULE = {"Fall26":{"EPY 2513|Starkville|0":{"instructor":"","slot":""},"EPY 2513|Starkville|1":{"instructor":"","slot":""},"EPY 3063|Starkville|0":{"instructor":"","slot":""},"EPY 3143|Starkville|0":{"instructor":"","slot":""},"EPY 3143|Starkville|1":{"instructor":"","slot":""},"EPY 3503|Starkville|0":{"instructor":"","slot":""},"EPY 3513|Starkville|0":{"instructor":"","slot":""},"EPY 3543|Starkville|0":{"instructor":"","slot":""},"EPY 4033/6033|Starkville|0":{"instructor":"","slot":""},"EPY 4073|Starkville|0":{"instructor":"","slot":""},"EPY 4214|Starkville|0":{"instructor":"","slot":""},"EPY 4313|Starkville|0":{"instructor":"","slot":""},"EPY 4513|Starkville|0":{"instructor":"","slot":""},"EPY 4553|Starkville|0":{"instructor":"","slot":""},"EPY 6553|Starkville|0":{"instructor":"","slot":""},"EPY 4683|Starkville|0":{"instructor":"","slot":""},"EPY 6214|Starkville|0":{"instructor":"","slot":""},"EPY 8533|Starkville|0":{"instructor":"","slot":""},"EPY 9213|Starkville|0":{"instructor":"","slot":""},"EPY 2513|Online Ed.|0":{"instructor":"","slot":""},"EPY 3503|Online Ed.|0":{"instructor":"","slot":""},"EPY 3513|Online Ed.|0":{"instructor":"","slot":""},"EPY 3543|Online Ed.|0":{"instructor":"","slot":""},"EPY 4033/6033|Online Ed.|0":{"instructor":"","slot":""},"EPY 4073/6073|Online Ed.|0":{"instructor":"","slot":""},"EPY 4214|Online Ed.|0":{"instructor":"","slot":""},"EPY 4513/6513|Online Ed.|0":{"instructor":"","slot":""},"EPY 4553/6553|Online Ed.|0":{"instructor":"","slot":""},"EPY 4683|Online Ed.|0":{"instructor":"","slot":""},"EPY 6214|Online Ed.|0":{"instructor":"","slot":""},"EPY 8293|Online Ed.|0":{"instructor":"","slot":""}}};
+let scheduleData = JSON.parse(JSON.stringify(DEFAULT_SCHEDULE));
+let ayFlags = {};
 
 // Entry: {instructor, days, time} or null (removed)
 function schedEntry(semKey, course, campus, si){
@@ -1241,7 +1241,7 @@ function schedRow(semKey, course, campus, si, e, extra){
   var isOnline = (campus === 'Online Ed.');
   if(isOnline && e.slot !== 'Online/Async'){
     e.slot = 'Online/Async';
-    // do not call persist() here — saving during render can overwrite loaded data
+    persist();
   }
   var slotCell;
   if(isOnline){
@@ -2084,22 +2084,6 @@ function importExcelFromBuffer(buffer){
     showStatus('\u2717 Import failed: '+err.message, false);
   }
 }
-
-// ═══════════════════════════════════════════════
-//  INIT — must be last so all constants (DEFAULT_SCHEDULE etc.) are assigned
-// ═══════════════════════════════════════════════
-(function init(){
-  try{
-    var sel = document.getElementById('add-year');
-    for(var y=14;y<=32;y++){
-      var s=yr2(y); var o=document.createElement('option');
-      o.value=s; o.textContent='20'+s; if(y===26)o.selected=true; sel.appendChild(o);
-    }
-    try{ if(loadPersisted()) rebuildCourseFilter(); }catch(e){}
-    initScheduleData();
-    renderSemester();
-  }catch(e){ console.error('Init error:', e); }
-})();
 
 </script>
 </body>
