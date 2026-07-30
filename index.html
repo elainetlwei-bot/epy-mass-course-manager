@@ -497,7 +497,7 @@ allTerms.sort(termSort);
 // ═══════════════════════════════════════════════
 //  PERSISTENCE (localStorage — works on GitHub Pages)
 // ═══════════════════════════════════════════════
-const STORAGE_KEY = 'epy_enrollment_shell_v3';
+const STORAGE_KEY = 'epy_enrollment_shell_v4';
 
 function persist(){
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify({semRows:semRows, allTerms:allTerms, scheduleData:scheduleData})); }catch(e){}
@@ -547,6 +547,13 @@ function clearAll(){
   renderSchedule();
   showStatus('↺ All data cleared');
 }
+
+// ═══════════════════════════════════════════════
+//  SCHEDULE STATE — declared here (before init) so loadPersisted() can write into
+//  scheduleData without hitting a let/const temporal dead zone
+// ═══════════════════════════════════════════════
+var DEFAULT_SCHEDULE = {"Fall26":{"EPY 2513|Starkville|0":{"instructor":"","slot":""},"EPY 2513|Starkville|1":{"instructor":"","slot":""},"EPY 3063|Starkville|0":{"instructor":"","slot":""},"EPY 3143|Starkville|0":{"instructor":"","slot":""},"EPY 3143|Starkville|1":{"instructor":"","slot":""},"EPY 3503|Starkville|0":{"instructor":"","slot":""},"EPY 3513|Starkville|0":{"instructor":"","slot":""},"EPY 3543|Starkville|0":{"instructor":"","slot":""},"EPY 4033/6033|Starkville|0":{"instructor":"","slot":""},"EPY 4073|Starkville|0":{"instructor":"","slot":""},"EPY 4214|Starkville|0":{"instructor":"","slot":""},"EPY 4313|Starkville|0":{"instructor":"","slot":""},"EPY 4513|Starkville|0":{"instructor":"","slot":""},"EPY 4553|Starkville|0":{"instructor":"","slot":""},"EPY 6553|Starkville|0":{"instructor":"","slot":""},"EPY 4683|Starkville|0":{"instructor":"","slot":""},"EPY 6214|Starkville|0":{"instructor":"","slot":""},"EPY 8533|Starkville|0":{"instructor":"","slot":""},"EPY 9213|Starkville|0":{"instructor":"","slot":""},"EPY 2513|Online Ed.|0":{"instructor":"","slot":""},"EPY 3503|Online Ed.|0":{"instructor":"","slot":""},"EPY 3513|Online Ed.|0":{"instructor":"","slot":""},"EPY 3543|Online Ed.|0":{"instructor":"","slot":""},"EPY 4033/6033|Online Ed.|0":{"instructor":"","slot":""},"EPY 4073/6073|Online Ed.|0":{"instructor":"","slot":""},"EPY 4214|Online Ed.|0":{"instructor":"","slot":""},"EPY 4513/6513|Online Ed.|0":{"instructor":"","slot":""},"EPY 4553/6553|Online Ed.|0":{"instructor":"","slot":""},"EPY 4683|Online Ed.|0":{"instructor":"","slot":""},"EPY 6214|Online Ed.|0":{"instructor":"","slot":""},"EPY 8293|Online Ed.|0":{"instructor":"","slot":""}}};
+var scheduleData = JSON.parse(JSON.stringify(DEFAULT_SCHEDULE));
 
 // ═══════════════════════════════════════════════
 //  INIT
@@ -784,9 +791,7 @@ function getVisibleRows(){
 }
 function getActiveAYs(rows, rangeN){
   const active = AY_DEFS.filter(def=>
-    // Show if any row has data for this AY's terms
     rows.some(r=>def.terms.some(t=>r.data[t]!=null)) ||
-    // OR if the user explicitly added any of this AY's terms
     def.terms.some(t=>allTerms.includes(t))
   );
   if(rangeN==='all') return active;
@@ -1169,9 +1174,8 @@ function semToIdx(k){
   return -1; // intersession
 }
 
-const DEFAULT_SCHEDULE = {"Fall26":{"EPY 2513|Starkville|0":{"instructor":"","slot":""},"EPY 2513|Starkville|1":{"instructor":"","slot":""},"EPY 3063|Starkville|0":{"instructor":"","slot":""},"EPY 3143|Starkville|0":{"instructor":"","slot":""},"EPY 3143|Starkville|1":{"instructor":"","slot":""},"EPY 3503|Starkville|0":{"instructor":"","slot":""},"EPY 3513|Starkville|0":{"instructor":"","slot":""},"EPY 3543|Starkville|0":{"instructor":"","slot":""},"EPY 4033/6033|Starkville|0":{"instructor":"","slot":""},"EPY 4073|Starkville|0":{"instructor":"","slot":""},"EPY 4214|Starkville|0":{"instructor":"","slot":""},"EPY 4313|Starkville|0":{"instructor":"","slot":""},"EPY 4513|Starkville|0":{"instructor":"","slot":""},"EPY 4553|Starkville|0":{"instructor":"","slot":""},"EPY 6553|Starkville|0":{"instructor":"","slot":""},"EPY 4683|Starkville|0":{"instructor":"","slot":""},"EPY 6214|Starkville|0":{"instructor":"","slot":""},"EPY 8533|Starkville|0":{"instructor":"","slot":""},"EPY 9213|Starkville|0":{"instructor":"","slot":""},"EPY 2513|Online Ed.|0":{"instructor":"","slot":""},"EPY 3503|Online Ed.|0":{"instructor":"","slot":""},"EPY 3513|Online Ed.|0":{"instructor":"","slot":""},"EPY 3543|Online Ed.|0":{"instructor":"","slot":""},"EPY 4033/6033|Online Ed.|0":{"instructor":"","slot":""},"EPY 4073/6073|Online Ed.|0":{"instructor":"","slot":""},"EPY 4214|Online Ed.|0":{"instructor":"","slot":""},"EPY 4513/6513|Online Ed.|0":{"instructor":"","slot":""},"EPY 4553/6553|Online Ed.|0":{"instructor":"","slot":""},"EPY 4683|Online Ed.|0":{"instructor":"","slot":""},"EPY 6214|Online Ed.|0":{"instructor":"","slot":""},"EPY 8293|Online Ed.|0":{"instructor":"","slot":""}}};
-let scheduleData = JSON.parse(JSON.stringify(DEFAULT_SCHEDULE));
-let ayFlags = {};
+// DEFAULT_SCHEDULE and scheduleData moved to before init() — see STATE block
+var ayFlags = {};
 
 // Entry: {instructor, days, time} or null (removed)
 function schedEntry(semKey, course, campus, si){
