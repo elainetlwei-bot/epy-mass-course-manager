@@ -870,6 +870,15 @@ function addSemester(){
 // ═══════════════════════════════════════════════
 //  AY TAB
 // ═══════════════════════════════════════════════
+// An AY counts as complete once its Spring term has data for at least one course.
+// Spring is the final term of the academic year, so its presence means the year has
+// finished. Not every course runs in Spring, hence "at least one".
+function ayIsComplete(def, rows){
+  const springTerm = def.terms.find(t=>getSeason(t)==='Spring');
+  if(!springTerm) return false;
+  return rows.some(r=>r.data[springTerm]!=null);
+}
+
 function calcAYRow(row, ayDef){
   const matches = semRows.filter(r=>r.course===row.course&&r.campus===row.campus);
   const termVals={};
@@ -936,16 +945,23 @@ function renderAY(){
     return;
   }
 
-  const allActive=AY_DEFS.filter(def=>ayRows.some(r=>def.terms.some(t=>r.data[t]!=null)));
+  // Only complete academic years feed the 5yr window. A partially entered year
+  // (e.g. Summer only) would otherwise claim the newest slot, push out a full year,
+  // and drag down Avg / Trend / CAP with an artificially low total.
+  const allActive=AY_DEFS.filter(def=>ayIsComplete(def,ayRows));
   const activeAYs=allActive.slice(-5);
 
-  // No enrollment data yet — show empty state
+  // No complete academic year yet — show empty state
   if(!activeAYs.length){
+    const hasAnyData = ayRows.some(r=>Object.values(r.data).some(v=>v!=null));
     document.getElementById('ay-metrics').innerHTML='';
     document.getElementById('ay-flag-legend').innerHTML='';
     document.getElementById('ay-table-wrap').innerHTML=
       '<div style="padding:3rem;text-align:center;color:var(--text-tertiary);font-style:italic;font-size:13px">'+
-      'No enrollment data yet — load your data using the <strong style="font-style:normal">⬆ Load</strong> button.</div>';
+      (hasAnyData
+        ? 'No completed academic year yet — this view waits until a Spring term has data, since a partial year would skew the 5yr Avg, Trend and CAP.'
+        : 'No enrollment data yet — load your data using the <strong style="font-style:normal">⬆ Load</strong> button.')+
+      '</div>';
     return;
   }
 
