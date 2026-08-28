@@ -900,7 +900,9 @@ function calcCAP(sections, totals){
   if(!sections) return null;
   const vals = totals.filter(x=>x!=null);
   if(!vals.length) return null;
-  return (vals.reduce((a,b)=>a+b,0)/5)/sections;
+  // Average over the years that actually have data, not a hardcoded 5 — otherwise a
+  // course offered in only some years has its CAP understated.
+  return (vals.reduce((a,b)=>a+b,0)/vals.length)/sections;
 }
 function startSecEdit(td,course,campus){
   if(td.querySelector('input')) return;
@@ -997,7 +999,7 @@ function renderAY(){
     const bL=ai===0?'border-left:2px solid var(--border-strong)':'border-left:2px solid var(--border-med)';
     hdr+='<th class="num" style="'+bL+'">'+def.label+'</th>';
   });
-  hdr+='<th class="num" style="border-left:2px solid var(--border-strong)">5yr Avg</th>'+
+  hdr+='<th class="num" style="border-left:2px solid var(--border-strong)" title="Mean enrollment across the years that have data. Years with no offering are skipped, not counted as zero.">5yr Avg ⓘ</th>'+
        '<th class="num" title="'+trendTip+'">Trend ⓘ</th>'+
        '<th class="num" title="Click any value to edit">Sec/yr ✎</th>'+
        '<th class="num">CAP</th></tr>';
@@ -1012,7 +1014,7 @@ function renderAY(){
     gRows.forEach(({row,ayData})=>{
       const totals=activeAYs.map(def=>{ const a=ayData.find(x=>x.def===def); return a?a.total:null; });
       const nonNull=totals.filter(x=>x!=null);
-      const avgVal=nonNull.length?(nonNull.reduce((a,b)=>a+b,0)/5).toFixed(1):'—';
+      const avgVal=nonNull.length?(nonNull.reduce((a,b)=>a+b,0)/nonNull.length).toFixed(1):'—';
       const cap=calcCAP(row.sections,totals);
       const trend=calcTrend(totals);
       const tV=trend!=null?(trend>=0?'+':'')+trend.toFixed(1)+'%':'—';
